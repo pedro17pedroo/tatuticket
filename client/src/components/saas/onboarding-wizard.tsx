@@ -24,15 +24,21 @@ interface OnboardingData {
   phone: string;
   position: string;
   
-  // Step 3: Plan Selection
+  // Step 3: Security Setup
+  password: string;
+  confirmPassword: string;
+  otpCode: string;
+  isEmailVerified: boolean;
+  
+  // Step 4: Plan Selection
   selectedPlan: "freemium" | "pro" | "enterprise";
   
-  // Step 4: Requirements
+  // Step 5: Requirements
   expectedTickets: string;
   integrations: string[];
   priorities: string[];
   
-  // Step 5: Payment (for paid plans)
+  // Step 6: Payment (for paid plans)
   paymentMethod?: "card" | "boleto" | "pix";
 }
 
@@ -82,6 +88,8 @@ interface OnboardingWizardProps {
 export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const { toast } = useToast();
   
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
@@ -92,13 +100,17 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
     email: "",
     phone: "",
     position: "",
+    password: "",
+    confirmPassword: "",
+    otpCode: "",
+    isEmailVerified: false,
     selectedPlan: initialPlan,
     expectedTickets: "",
     integrations: [],
     priorities: []
   });
 
-  const totalSteps = onboardingData.selectedPlan === "freemium" ? 4 : 5;
+  const totalSteps = onboardingData.selectedPlan === "freemium" ? 5 : 6;
   const progress = (currentStep / totalSteps) * 100;
 
   // Create account mutation
@@ -125,7 +137,7 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
       const userResponse = await apiRequest("POST", "/api/auth/register", {
         username: data.fullName,
         email: data.email,
-        password: "temp123", // In production, this would be generated/set by user
+        password: data.password,
         role: "admin",
         tenantId: tenant.id
       });
@@ -177,10 +189,16 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
       case 2:
         return onboardingData.fullName && onboardingData.email && onboardingData.position;
       case 3:
-        return onboardingData.selectedPlan;
+        return onboardingData.password && 
+               onboardingData.confirmPassword && 
+               onboardingData.password === onboardingData.confirmPassword &&
+               onboardingData.password.length >= 6 &&
+               onboardingData.isEmailVerified;
       case 4:
-        return true; // Optional step
+        return onboardingData.selectedPlan;
       case 5:
+        return true; // Optional step
+      case 6:
         return onboardingData.selectedPlan === "freemium" || onboardingData.paymentMethod;
       default:
         return true;
@@ -205,6 +223,82 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
       ? current.filter(id => id !== priorityId)
       : [...current, priorityId];
     updateData({ priorities: updated });
+  };
+
+  // OTP functions
+  const sendOtpMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/auth/send-otp", {
+        email,
+        type: "email_verification"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setOtpSent(true);
+      toast({
+        title: "Código enviado!",
+        description: `Enviamos um código de verificação para ${onboardingData.email}`,
+      });
+      
+      // In development, show the OTP code for testing
+      if (data.otpCode) {
+        toast({
+          title: "Código para teste",
+          description: `Use o código: ${data.otpCode}`,
+          variant: "default",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao enviar código",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: async ({ email, code }: { email: string; code: string }) => {
+      const response = await apiRequest("POST", "/api/auth/verify-otp", {
+        email,
+        code,
+        type: "email_verification"
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      updateData({ isEmailVerified: true });
+      toast({
+        title: "Email verificado!",
+        description: "Seu email foi verificado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Código inválido",
+        description: error.message || "Verifique o código e tente novamente.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendOtp = () => {
+    if (onboardingData.email) {
+      setIsSendingOtp(true);
+      sendOtpMutation.mutate(onboardingData.email);
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = () => {
+    if (onboardingData.email && onboardingData.otpCode) {
+      verifyOtpMutation.mutate({
+        email: onboardingData.email,
+        code: onboardingData.otpCode
+      });
+    }
   };
 
   const renderStepContent = () => {
@@ -319,6 +413,113 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
+              <i className="fas fa-shield-alt text-3xl text-primary mb-4"></i>
+              <h3 className="text-xl font-semibold">Configuração de Segurança</h3>
+              <p className="text-gray-600">Defina sua senha e verifique seu email</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="password">Senha *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={onboardingData.password}
+                onChange={(e) => updateData({ password: e.target.value })}
+                placeholder="Mínimo 6 caracteres"
+                data-testid="input-password"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={onboardingData.confirmPassword}
+                onChange={(e) => updateData({ confirmPassword: e.target.value })}
+                placeholder="Digite a senha novamente"
+                data-testid="input-confirm-password"
+              />
+              {onboardingData.password && onboardingData.confirmPassword && 
+               onboardingData.password !== onboardingData.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">As senhas não coincidem</p>
+              )}
+            </div>
+            
+            <div className="border-t pt-4">
+              <Label>Verificação de Email *</Label>
+              <div className="space-y-3 mt-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={onboardingData.email}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                  <Button
+                    onClick={handleSendOtp}
+                    disabled={!onboardingData.email || isSendingOtp || sendOtpMutation.isPending}
+                    variant="outline"
+                    data-testid="button-send-otp"
+                  >
+                    {sendOtpMutation.isPending ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Enviando...
+                      </>
+                    ) : otpSent ? (
+                      "Reenviar"
+                    ) : (
+                      "Enviar Código"
+                    )}
+                  </Button>
+                </div>
+                
+                {otpSent && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={onboardingData.otpCode}
+                      onChange={(e) => updateData({ otpCode: e.target.value })}
+                      placeholder="Digite o código de 6 dígitos"
+                      maxLength={6}
+                      data-testid="input-otp-code"
+                    />
+                    <Button
+                      onClick={handleVerifyOtp}
+                      disabled={!onboardingData.otpCode || verifyOtpMutation.isPending || onboardingData.isEmailVerified}
+                      data-testid="button-verify-otp"
+                    >
+                      {verifyOtpMutation.isPending ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin mr-2"></i>
+                          Verificando...
+                        </>
+                      ) : onboardingData.isEmailVerified ? (
+                        <>
+                          <i className="fas fa-check mr-2"></i>
+                          Verificado
+                        </>
+                      ) : (
+                        "Verificar"
+                      )}
+                    </Button>
+                  </div>
+                )}
+                
+                {onboardingData.isEmailVerified && (
+                  <div className="flex items-center text-green-600 text-sm">
+                    <i className="fas fa-check-circle mr-2"></i>
+                    Email verificado com sucesso!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+        
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
               <i className="fas fa-star text-3xl text-primary mb-4"></i>
               <h3 className="text-xl font-semibold">Escolha seu Plano</h3>
               <p className="text-gray-600">Selecione o plano ideal para sua empresa</p>
@@ -362,7 +563,7 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
           </div>
         );
         
-      case 4:
+      case 5:
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
@@ -436,7 +637,7 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
           </div>
         );
         
-      case 5:
+      case 6:
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">

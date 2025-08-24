@@ -135,6 +135,18 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// OTP verification codes
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  type: text("type").notNull(), // email_verification, password_reset, login_2fa
+  attempts: integer("attempts").default(0),
+  isUsed: boolean("is_used").default(false),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   tenant: one(tenants, { fields: [users.tenantId], references: [tenants.id] }),
@@ -228,6 +240,11 @@ export const insertSlaConfigSchema = createInsertSchema(slaConfigs).omit({
   createdAt: true,
 });
 
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -246,3 +263,5 @@ export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema
 export type SlaConfig = typeof slaConfigs.$inferSelect;
 export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type OtpCode = typeof otpCodes.$inferSelect;
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;

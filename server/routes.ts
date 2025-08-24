@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertTenantSchema, insertTicketSchema, insertDepartmentSchema, insertTeamSchema, insertCustomerSchema, insertKnowledgeArticleSchema, insertSlaConfigSchema } from "@shared/schema";
+import { db } from "./db";
+import { insertUserSchema, insertTenantSchema, insertTicketSchema, insertDepartmentSchema, insertTeamSchema, insertCustomerSchema, insertKnowledgeArticleSchema, insertSlaConfigSchema, insertOtpCodeSchema, users } from "@shared/schema";
 import { z } from "zod";
+import { desc, eq } from "drizzle-orm";
 import OpenAI from "openai";
 import Stripe from "stripe";
 
@@ -106,6 +108,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       agent: { email: "maria.santos@techcorp.com", password: "agent123", role: "agent" },
       manager: { email: "ana.costa@techcorp.com", password: "manager123", role: "manager" }
     });
+  });
+
+  // OTP routes
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { email, type = "email_verification" } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Generate 6-digit OTP
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set expiration time (5 minutes from now)
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      
+      // Save OTP to database
+      await storage.createOtpCode({
+        email,
+        code,
+        type,
+        expiresAt
+      });
+      
+      // In production, this would send an actual email
+      // For demo purposes, we'll log it and return success
+      console.log(`OTP for ${email}: ${code} (expires at ${expiresAt})`);
+      
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: null,
+        action: "otp_sent",
+        resourceType: "otp",
+        resourceId: null,
+        metadata: { email, type },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json({ 
+        message: "OTP sent successfully",
+        // In demo mode, return the code for testing
+        ...(process.env.NODE_ENV === "development" && { otpCode: code })
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { email, code, type = "email_verification" } = req.body;
+      
+      if (!email || !code) {
+        return res.status(400).json({ message: "Email and code are required" });
+      }
+      
+      // Verify OTP
+      const otpRecord = await storage.verifyOtpCode(email, code, type);
+      
+      if (!otpRecord) {
+        await storage.createAuditLog({
+          userId: null,
+          tenantId: null,
+          action: "otp_verification_failed",
+          resourceType: "otp",
+          resourceId: null,
+          metadata: { email, type, reason: "invalid_or_expired" },
+          ipAddress: req.ip || null,
+          userAgent: req.get('User-Agent') || null,
+        });
+        
+        return res.status(400).json({ message: "Invalid or expired OTP code" });
+      }
+      
+      // Check attempt limit
+      if ((otpRecord.attempts || 0) >= 3) {
+        return res.status(400).json({ message: "Too many attempts. Please request a new OTP." });
+      }
+      
+      // Mark OTP as used
+      await storage.markOtpAsUsed(otpRecord.id);
+      
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: null,
+        action: "otp_verified",
+        resourceType: "otp",
+        resourceId: otpRecord.id,
+        metadata: { email, type },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json({ message: "OTP verified successfully", verified: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   // Tenant routes
@@ -797,7 +898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
       
       // Don't return passwords
-      const safeUsers = allUsers.map(({ password, ...user }) => user);
+      const safeUsers = allUsers.map(({ password, ...user }: any) => user);
       
       res.json(safeUsers);
     } catch (error: any) {

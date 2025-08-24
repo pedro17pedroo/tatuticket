@@ -1,9 +1,9 @@
 import { 
-  users, tenants, tickets, departments, teams, customers, knowledgeArticles, slaConfigs, auditLogs,
+  users, tenants, tickets, departments, teams, customers, knowledgeArticles, slaConfigs, auditLogs, otpCodes,
   type User, type InsertUser, type Tenant, type InsertTenant, type Ticket, type InsertTicket,
   type Department, type InsertDepartment, type Team, type InsertTeam, type Customer, type InsertCustomer,
   type KnowledgeArticle, type InsertKnowledgeArticle, type SlaConfig, type InsertSlaConfig,
-  type AuditLog
+  type AuditLog, type OtpCode, type InsertOtpCode
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -65,6 +65,13 @@ export interface IStorage {
   // Audit Logs
   createAuditLog(log: Omit<AuditLog, 'id' | 'createdAt'>): Promise<AuditLog>;
   getAuditLogsByTenant(tenantId: string): Promise<AuditLog[]>;
+
+  // OTP Codes
+  createOtpCode(otp: InsertOtpCode): Promise<OtpCode>;
+  verifyOtpCode(email: string, code: string, type: string): Promise<OtpCode | null>;
+  markOtpAsUsed(id: string): Promise<void>;
+  incrementOtpAttempts(id: string): Promise<void>;
+  cleanupExpiredOtps(): Promise<void>;
 
   // Analytics
   getTicketStats(tenantId: string): Promise<{
@@ -355,6 +362,45 @@ export class DatabaseStorage implements IStorage {
       totalUsers: userStats?.totalUsers || 0,
       totalTickets: ticketStats?.totalTickets || 0,
     };
+  }
+
+  // OTP methods
+  async createOtpCode(otp: InsertOtpCode): Promise<OtpCode> {
+    const [created] = await db.insert(otpCodes).values(otp).returning();
+    return created;
+  }
+
+  async verifyOtpCode(email: string, code: string, type: string): Promise<OtpCode | null> {
+    const [otpRecord] = await db.select()
+      .from(otpCodes)
+      .where(
+        and(
+          eq(otpCodes.email, email),
+          eq(otpCodes.code, code),
+          eq(otpCodes.type, type),
+          eq(otpCodes.isUsed, false),
+          sql`expires_at > now()`
+        )
+      );
+    
+    return otpRecord || null;
+  }
+
+  async markOtpAsUsed(id: string): Promise<void> {
+    await db.update(otpCodes)
+      .set({ isUsed: true })
+      .where(eq(otpCodes.id, id));
+  }
+
+  async incrementOtpAttempts(id: string): Promise<void> {
+    await db.update(otpCodes)
+      .set({ attempts: sql`attempts + 1` })
+      .where(eq(otpCodes.id, id));
+  }
+
+  async cleanupExpiredOtps(): Promise<void> {
+    await db.delete(otpCodes)
+      .where(sql`expires_at < now() OR is_used = true`);
   }
 }
 
