@@ -11,6 +11,7 @@ import { TeamManagement } from "@/components/organization/team-management";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
+import { queryClient } from "@/lib/queryClient";
 import type { NavigationItem, TicketStats } from "@/types/portal";
 
 const navigationItems: NavigationItem[] = [
@@ -25,38 +26,6 @@ const navigationItems: NavigationItem[] = [
   { id: 'settings', label: 'Configurações', icon: 'fa-cog', href: '#' },
 ];
 
-const mockTickets = [
-  {
-    id: "TT-2024-001",
-    subject: "Erro no sistema de pagamento",
-    customer: "Acme Corp",
-    status: "critical",
-    priority: "high",
-    agent: "Maria Santos",
-    sla: "2h restantes",
-    slaStatus: "warning"
-  },
-  {
-    id: "TT-2024-002",
-    subject: "Dúvida sobre funcionalidade",
-    customer: "Beta Inc",
-    status: "in-progress",
-    priority: "medium",
-    agent: "Pedro Lima",
-    sla: "12h restantes",
-    slaStatus: "good"
-  },
-  {
-    id: "TT-2024-003",
-    subject: "Solicitação de nova feature",
-    customer: "Gamma Ltd",
-    status: "waiting",
-    priority: "low",
-    agent: "Ana Costa",
-    sla: "48h restantes",
-    slaStatus: "good"
-  },
-];
 
 const getStatusBadge = (status: string) => {
   const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -95,6 +64,10 @@ export function OrganizationPortal() {
 
   const { data: tickets, isLoading: isLoadingTickets } = useQuery({
     queryKey: ['/api/tickets', tenantId],
+    queryFn: async () => {
+      const response = await fetch(`/api/tickets?tenantId=${tenantId}`);
+      return response.json();
+    },
     enabled: !!tenantId,
   });
 
@@ -173,31 +146,31 @@ export function OrganizationPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatsCard
                 title="Tickets Abertos"
-                value={isLoadingStats ? "..." : ticketStats?.open || 142}
+                value={isLoadingStats ? "..." : ticketStats?.openTickets || 0}
                 icon="fa-exclamation-triangle"
                 iconColor="bg-red-100 text-red-600"
-                change={{ value: "+12%", type: "increase", label: "vs. mês anterior" }}
+                change={{ value: ticketStats?.openTickets ? `${ticketStats.openTickets} abertos` : "Nenhum", type: ticketStats?.openTickets ? "increase" : "decrease", label: "aguardando atendimento" }}
               />
               <StatsCard
                 title="Resolvidos Hoje"
-                value={isLoadingStats ? "..." : ticketStats?.resolved || 28}
+                value={isLoadingStats ? "..." : ticketStats?.resolvedTickets || 0}
                 icon="fa-check-circle"
                 iconColor="bg-green-100 text-green-600"
-                change={{ value: "+8%", type: "increase", label: "vs. ontem" }}
+                change={{ value: ticketStats?.resolvedTickets ? `${ticketStats.resolvedTickets} resolvidos` : "Nenhum", type: ticketStats?.resolvedTickets ? "increase" : "decrease", label: "hoje" }}
               />
               <StatsCard
-                title="Tempo Médio"
-                value={isLoadingStats ? "..." : `${ticketStats?.avgResolutionTime?.toFixed(1) || 4.2}h`}
-                icon="fa-clock"
+                title="Críticos"
+                value={isLoadingStats ? "..." : ticketStats?.criticalTickets || 0}
+                icon="fa-exclamation"
+                iconColor="bg-orange-100 text-orange-600"
+                change={{ value: ticketStats?.criticalTickets ? `${ticketStats.criticalTickets} críticos` : "Nenhum", type: ticketStats?.criticalTickets === 0 ? "decrease" : "increase", label: "prioridade máxima" }}
+              />
+              <StatsCard
+                title="Total de Tickets"
+                value={isLoadingStats ? "..." : ticketStats?.totalTickets || 0}
+                icon="fa-ticket-alt"
                 iconColor="bg-blue-100 text-blue-600"
-                change={{ value: "-15%", type: "decrease", label: "melhoria" }}
-              />
-              <StatsCard
-                title="CSAT Score"
-                value="4.7"
-                icon="fa-star"
-                iconColor="bg-yellow-100 text-yellow-600"
-                change={{ value: "+0.3", type: "increase", label: "este mês" }}
+                change={{ value: ticketStats?.totalTickets ? `${ticketStats.totalTickets} total` : "Nenhum", type: ticketStats?.totalTickets ? "increase" : "decrease", label: "na plataforma" }}
               />
             </div>
 
@@ -232,17 +205,17 @@ export function OrganizationPortal() {
                             <div className="loading-skeleton h-4 w-full"></div>
                           </td>
                         </tr>
-                      ) : (
-                        mockTickets.map((ticket) => (
+                      ) : tickets && tickets.length > 0 ? (
+                        tickets.map((ticket: any) => (
                           <tr key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {ticket.id}
+                              {ticket.ticketNumber}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {ticket.subject}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {ticket.customer}
+                              {ticket.customer?.name || 'Cliente não informado'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {getStatusBadge(ticket.status)}
@@ -251,18 +224,35 @@ export function OrganizationPortal() {
                               {getPriorityBadge(ticket.priority)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {ticket.agent}
+                              {ticket.assignee?.username || 'Não atribuído'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <span className={cn(
                                 "font-medium",
-                                ticket.slaStatus === "warning" ? "text-red-600" : "text-green-600"
+                                ticket.slaDeadline && new Date(ticket.slaDeadline) < new Date() 
+                                  ? "text-red-600" : "text-green-600"
                               )}>
-                                {ticket.sla}
+                                {ticket.slaDeadline 
+                                  ? `${Math.ceil((new Date(ticket.slaDeadline).getTime() - new Date().getTime()) / (1000 * 60 * 60))}h restantes`
+                                  : 'SLA não definido'
+                                }
                               </span>
                             </td>
                           </tr>
                         ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                            <div className="flex flex-col items-center py-8">
+                              <i className="fas fa-ticket-alt text-4xl text-gray-300 mb-4"></i>
+                              <p className="text-lg font-medium mb-2">Nenhum ticket encontrado</p>
+                              <p className="text-sm mb-4">Crie o primeiro ticket para começar o atendimento.</p>
+                              <Button onClick={() => setIsCreateTicketOpen(true)} data-testid="button-create-first-ticket">
+                                <i className="fas fa-plus mr-2"></i>Criar Primeiro Ticket
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                   </table>
@@ -350,6 +340,12 @@ export function OrganizationPortal() {
           <CreateTicketDialog
             isOpen={isCreateTicketOpen}
             onClose={() => setIsCreateTicketOpen(false)}
+            onTicketCreated={() => {
+              setIsCreateTicketOpen(false);
+              // Recarregar dados dos tickets e estatísticas
+              queryClient.invalidateQueries({ queryKey: ['/api/tickets', tenantId] });
+              queryClient.invalidateQueries({ queryKey: ['/api/analytics/ticket-stats', tenantId] });
+            }}
           />
         </div>
       </div>

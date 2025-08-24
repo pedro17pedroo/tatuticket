@@ -82,7 +82,7 @@ export function TeamManagement() {
       const response = await fetch(`/api/users?tenantId=${tenantId}&role=agent,manager`);
       return response.json();
     },
-    enabled: !!tenantId && (isCreateOpen || editingTeam),
+    enabled: !!tenantId && (isCreateOpen || !!editingTeam),
   });
 
   // Create team mutation
@@ -179,7 +179,7 @@ export function TeamManagement() {
       departmentId: team.departmentId,
       leaderId: team.leaderId || "",
       maxCapacity: team.maxCapacity || 5,
-      specialties: team.specialties || [],
+      specialties: (team.specialties as string[]) || [],
       status: team.status as "active" | "inactive"
     });
     setIsCreateOpen(true);
@@ -282,11 +282,11 @@ export function TeamManagement() {
                 </div>
 
                 {/* Specialties */}
-                {team.specialties && team.specialties.length > 0 && (
+                {team.specialties && Array.isArray(team.specialties) && team.specialties.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Especializações:</div>
                     <div className="flex flex-wrap gap-1">
-                      {team.specialties.map((specialty, index) => (
+                      {(team.specialties as string[]).map((specialty: string, index: number) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {specialty}
                         </Badge>
@@ -394,7 +394,7 @@ export function TeamManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Sem líder</SelectItem>
-                    {users.map(user => (
+                    {users.map((user: User) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.username} ({user.email})
                       </SelectItem>

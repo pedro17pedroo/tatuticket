@@ -175,7 +175,7 @@ export function DepartmentManagement() {
       name: department.name,
       description: department.description || "",
       managerEmail: department.managerEmail || "",
-      slaConfig: department.slaConfig || {
+      slaConfig: (department.slaConfig as any) || {
         criticalHours: 2,
         highHours: 8,
         mediumHours: 24,
@@ -276,19 +276,19 @@ export function DepartmentManagement() {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex justify-between">
                       <span className="text-red-600">Crítico:</span>
-                      <span>{department.slaConfig?.criticalHours || 2}h</span>
+                      <span>{(department.slaConfig as any)?.criticalHours || 2}h</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-orange-600">Alto:</span>
-                      <span>{department.slaConfig?.highHours || 8}h</span>
+                      <span>{(department.slaConfig as any)?.highHours || 8}h</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-yellow-600">Médio:</span>
-                      <span>{department.slaConfig?.mediumHours || 24}h</span>
+                      <span>{(department.slaConfig as any)?.mediumHours || 24}h</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-green-600">Baixo:</span>
-                      <span>{department.slaConfig?.lowHours || 72}h</span>
+                      <span>{(department.slaConfig as any)?.lowHours || 72}h</span>
                     </div>
                   </div>
                 </div>
