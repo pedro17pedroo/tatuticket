@@ -506,7 +506,7 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-onboarding">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <i className="fas fa-rocket mr-2 text-primary"></i>
@@ -528,13 +528,13 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
         )}
         
         {/* Step Content */}
-        <div className="min-h-[400px]">
+        <div className="flex-1 overflow-y-auto">
           {renderStepContent()}
         </div>
         
         {/* Navigation Buttons */}
         {currentStep <= totalSteps && (
-          <div className="flex gap-4 pt-6 border-t">
+          <div className="flex gap-4 pt-4 border-t mt-auto flex-shrink-0">
             <Button 
               variant="outline" 
               onClick={handleBack}
