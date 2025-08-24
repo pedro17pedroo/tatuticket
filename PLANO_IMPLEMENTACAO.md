@@ -36,11 +36,11 @@
 **Status: 🚧 Em Progresso**
 
 #### 1.1 Portal dos Clientes - Autoatendimento Completo
-- [ ] Interface de criação/visualização de tickets
-- [ ] Dashboard com status e histórico pessoal
-- [ ] Sistema de busca na base de conhecimento
-- [ ] Chat interativo com agentes
-- [ ] Visualização de SLA e bolsa de horas (somente leitura)
+- [x] Interface de criação/visualização de tickets
+- [x] Dashboard com status e histórico pessoal
+- [x] Sistema de busca na base de conhecimento
+- [x] Chat interativo com agentes
+- [x] Visualização de SLA e bolsa de horas (somente leitura)
 
 #### 1.2 Portal Organizacional - Gestão Completa
 - [ ] Formulários funcionais de criação/edição de tickets
@@ -126,7 +126,7 @@
 |--------|---------------------|--------------------------|---------|
 | SaaS | 80% | 20% | 🚧 Em Progresso |
 | Organizacional | 60% | 15% | 🚧 Em Progresso |  
-| Clientes | 10% | 0% | ❌ Pendente |
+| Clientes | 95% | 70% | ✅ Concluído |
 | Admin | 70% | 25% | 🚧 Em Progresso |
 
 ---

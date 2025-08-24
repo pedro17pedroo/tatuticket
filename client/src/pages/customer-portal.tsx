@@ -6,6 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
+import { KnowledgeBaseSearch } from "@/components/customer/knowledge-base-search";
+import { TicketDetailsView } from "@/components/customer/ticket-details-view";
+import { SlaHoursDashboard } from "@/components/customer/sla-hours-dashboard";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
 
@@ -60,7 +63,7 @@ const mockTickets = [
 const getStatusBadge = (status: string) => {
   const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     resolved: { label: "Resolvido", variant: "outline" },
-    "in-progress": { label: "Em Andamento", variant: "default" },
+    "in_progress": { label: "Em Andamento", variant: "default" },
     open: { label: "Aberto", variant: "destructive" },
     closed: { label: "Fechado", variant: "secondary" },
   };
@@ -72,6 +75,7 @@ const getStatusBadge = (status: string) => {
 export function CustomerPortal() {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const user = authService.getCurrentUser();
   const tenantId = authService.getTenantId();
 
@@ -106,19 +110,119 @@ export function CustomerPortal() {
         setIsCreateTicketOpen(true);
         break;
       case 'my-tickets':
-        // Scroll to tickets section
-        document.getElementById('tickets-section')?.scrollIntoView({ behavior: 'smooth' });
+        setSelectedAction('my-tickets');
         break;
       case 'knowledge-base':
-        // Navigate to knowledge base (future implementation)
-        console.log('Knowledge base clicked');
+        setSelectedAction('knowledge-base');
         break;
       case 'reports':
-        // Show reports modal (future implementation)
-        console.log('Reports clicked');
+        setSelectedAction('reports');
         break;
     }
   };
+
+  const handleViewTicket = (ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    setSelectedAction('ticket-details');
+  };
+
+  const handleBackToPortal = () => {
+    setSelectedAction(null);
+    setSelectedTicketId(null);
+  };
+
+  // Conditional rendering based on selected action
+  if (selectedAction === 'ticket-details' && selectedTicketId) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-semibold text-gray-900">Central de Suporte</h1>
+                <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                  Detalhes do Ticket
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-gray-900">{user.username}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <TicketDetailsView ticketId={selectedTicketId} onBack={handleBackToPortal} />
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedAction === 'knowledge-base') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-semibold text-gray-900">Central de Suporte</h1>
+                <Badge variant="outline" className="bg-green-100 text-green-800">
+                  Base de Conhecimento
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-gray-900">{user.username}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <KnowledgeBaseSearch onClose={handleBackToPortal} />
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedAction === 'reports') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-semibold text-gray-900">Central de Suporte</h1>
+                <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                  SLA e Horas
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-gray-900">{user.username}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <SlaHoursDashboard />
+          <div className="mt-6 text-center">
+            <Button onClick={handleBackToPortal} data-testid="button-back-to-portal">
+              Voltar ao Portal
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,8 +242,7 @@ export function CustomerPortal() {
               </Button>
               <div className="flex items-center space-x-2">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=facearea&facepad=2&w=40&h=40" alt="Customer avatar" />
-                  <AvatarFallback>AR</AvatarFallback>
+                  <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium text-gray-900">{user.username}</span>
               </div>
@@ -169,48 +272,8 @@ export function CustomerPortal() {
         </div>
 
         {/* SLA Status and Hours Bank */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status do SLA</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Tickets Críticos</span>
-                  <span className="text-sm text-green-600 font-medium" data-testid="text-critical-sla">4h restantes</span>
-                </div>
-                <Progress value={75} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Tickets Normais</span>
-                  <span className="text-sm text-yellow-600 font-medium" data-testid="text-normal-sla">12h restantes</span>
-                </div>
-                <Progress value={40} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Bolsa de Horas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Horas Disponíveis</span>
-                <span className="text-2xl font-bold text-primary" data-testid="text-available-hours">42.5h</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Horas Utilizadas este Mês</span>
-                <span className="text-lg font-semibold text-gray-900" data-testid="text-used-hours">7.5h</span>
-              </div>
-              <Progress value={18} className="h-3" />
-              <Button className="w-full" data-testid="button-reload-hours">
-                Recarregar Bolsa
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="mb-8">
+          <SlaHoursDashboard />
         </div>
 
         {/* Recent Tickets */}
@@ -260,6 +323,7 @@ export function CustomerPortal() {
                           <Button 
                             variant="link" 
                             className="p-0 h-auto text-primary hover:text-blue-700"
+                            onClick={() => handleViewTicket(ticket.id)}
                             data-testid={`button-view-ticket-${ticket.id}`}
                           >
                             {ticket.status === "resolved" ? "Ver Detalhes" : "Acompanhar"}
