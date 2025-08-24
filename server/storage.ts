@@ -51,6 +51,10 @@ export interface IStorage {
   // Knowledge Articles
   getKnowledgeArticle(id: string): Promise<KnowledgeArticle | undefined>;
   createKnowledgeArticle(article: InsertKnowledgeArticle): Promise<KnowledgeArticle>;
+  updateKnowledgeArticle(id: string, updates: Partial<KnowledgeArticle>): Promise<KnowledgeArticle>;
+  deleteKnowledgeArticle(id: string): Promise<void>;
+  updateKnowledgeArticleStatus(id: string, status: string): Promise<KnowledgeArticle>;
+  incrementKnowledgeArticleViews(id: string): Promise<void>;
   getKnowledgeArticlesByTenant(tenantId: string): Promise<KnowledgeArticle[]>;
 
   // SLA Configs
@@ -232,6 +236,48 @@ export class DatabaseStorage implements IStorage {
   async createKnowledgeArticle(insertArticle: InsertKnowledgeArticle): Promise<KnowledgeArticle> {
     const [article] = await db.insert(knowledgeArticles).values(insertArticle).returning();
     return article;
+  }
+
+  async updateKnowledgeArticle(id: string, updates: Partial<KnowledgeArticle>): Promise<KnowledgeArticle> {
+    // Always update the updatedAt timestamp
+    const updatesWithTimestamp = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    const [article] = await db.update(knowledgeArticles)
+      .set(updatesWithTimestamp)
+      .where(eq(knowledgeArticles.id, id))
+      .returning();
+    
+    if (!article) {
+      throw new Error('Article not found');
+    }
+    
+    return article;
+  }
+
+  async deleteKnowledgeArticle(id: string): Promise<void> {
+    await db.delete(knowledgeArticles).where(eq(knowledgeArticles.id, id));
+  }
+
+  async updateKnowledgeArticleStatus(id: string, status: string): Promise<KnowledgeArticle> {
+    const [article] = await db.update(knowledgeArticles)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(knowledgeArticles.id, id))
+      .returning();
+    
+    if (!article) {
+      throw new Error('Article not found');
+    }
+    
+    return article;
+  }
+
+  async incrementKnowledgeArticleViews(id: string): Promise<void> {
+    await db.update(knowledgeArticles)
+      .set({ viewCount: sql`${knowledgeArticles.viewCount} + 1` })
+      .where(eq(knowledgeArticles.id, id));
   }
 
   async getKnowledgeArticlesByTenant(tenantId: string): Promise<KnowledgeArticle[]> {

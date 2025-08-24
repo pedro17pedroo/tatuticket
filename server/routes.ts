@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.createAuditLog({
         userId: null,
-        tenantId: userData.tenantId,
+        tenantId: userData.tenantId || null,
         action: "user_created",
         resourceType: "user",
         resourceId: user.id,
@@ -434,6 +434,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(article);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/knowledge-articles/:id", async (req, res) => {
+    try {
+      const article = await storage.getKnowledgeArticle(req.params.id);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      res.json(article);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/knowledge-articles/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const article = await storage.updateKnowledgeArticle(req.params.id, updates);
+      res.json(article);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/knowledge-articles/:id", async (req, res) => {
+    try {
+      await storage.deleteKnowledgeArticle(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/knowledge-articles/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      const article = await storage.updateKnowledgeArticleStatus(req.params.id, status);
+      res.json(article);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/knowledge-articles/:id/view", async (req, res) => {
+    try {
+      await storage.incrementKnowledgeArticleViews(req.params.id);
+      res.status(200).json({ message: "View count incremented" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

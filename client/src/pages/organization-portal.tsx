@@ -12,6 +12,7 @@ import { SlaManagement } from "@/components/organization/sla-management";
 import { CustomerManagement } from "@/components/organization/customer-management";
 import { AgentManagement } from "@/components/organization/agent-management";
 import { AdvancedAnalytics } from "@/components/organization/advanced-analytics";
+import { KnowledgeManagement } from "@/components/organization/knowledge-management";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -350,8 +351,13 @@ export function OrganizationPortal() {
               <AdvancedAnalytics />
             )}
             
+            {/* Knowledge Management */}
+            {activeNavItem === 'knowledge' && (
+              <KnowledgeManagement />
+            )}
+            
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports'].includes(activeNavItem) && (
+            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>

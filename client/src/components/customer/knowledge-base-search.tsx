@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, BookOpen, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, BookOpen, Eye, X } from "lucide-react";
 import { authService } from "@/lib/auth";
 import type { KnowledgeArticle } from "@shared/schema";
 
@@ -16,6 +17,8 @@ interface KnowledgeBaseSearchProps {
 export function KnowledgeBaseSearch({ onClose }: KnowledgeBaseSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
+  const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const tenantId = authService.getTenantId();
 
   const { data: searchResults, isLoading, refetch } = useQuery<KnowledgeArticle[]>({
@@ -29,12 +32,34 @@ export function KnowledgeBaseSearch({ onClose }: KnowledgeBaseSearchProps) {
     enabled: false // Only search when user submits
   });
 
+  // Increment article view count
+  const incrementViewMutation = useMutation({
+    mutationFn: async (articleId: string) => {
+      const response = await fetch(`/api/knowledge-articles/${articleId}/view`, {
+        method: 'PUT',
+      });
+      if (!response.ok) throw new Error('Failed to increment view');
+      return response.json();
+    },
+    onSuccess: () => {
+      // Refetch search results to update view count
+      refetch();
+    }
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setHasSearched(true);
       refetch();
     }
+  };
+
+  const handleViewArticle = (article: KnowledgeArticle) => {
+    setSelectedArticle(article);
+    setIsArticleModalOpen(true);
+    // Increment view count
+    incrementViewMutation.mutate(article.id);
   };
 
   const getStatusBadge = (status: string) => {
@@ -141,6 +166,7 @@ export function KnowledgeBaseSearch({ onClose }: KnowledgeBaseSearchProps) {
                       <Button 
                         variant="outline" 
                         size="sm"
+                        onClick={() => handleViewArticle(article)}
                         data-testid={`button-view-article-${article.id}`}
                       >
                         <BookOpen className="h-4 w-4 mr-2" />
@@ -214,6 +240,83 @@ export function KnowledgeBaseSearch({ onClose }: KnowledgeBaseSearchProps) {
           </div>
         </div>
       )}
+
+      {/* Article View Modal */}
+      <Dialog open={isArticleModalOpen} onOpenChange={setIsArticleModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-bold text-gray-900">
+                {selectedArticle?.title}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsArticleModalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          {selectedArticle && (
+            <div className="space-y-6">
+              {/* Article Meta */}
+              <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(selectedArticle.status)}
+                  {selectedArticle.isPublic ? (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      Público
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-orange-600 border-orange-600">
+                      Privado
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <Eye className="h-4 w-4 mr-1" />
+                  {selectedArticle.viewCount || 0} visualizações
+                </div>
+                <span className="text-sm text-gray-500">
+                  Atualizado em {new Date(selectedArticle.updatedAt || selectedArticle.createdAt!).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+
+              {/* Article Content */}
+              <div className="prose prose-gray max-w-none">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  {selectedArticle.content}
+                </div>
+              </div>
+
+              {/* Article Actions */}
+              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500">
+                    Este artigo foi útil?
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      👍 Sim
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      👎 Não
+                    </Button>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsArticleModalOpen(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
