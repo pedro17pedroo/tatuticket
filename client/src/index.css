@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(180 6.6667% 97.0588%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(207 100% 42%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 9% 26%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 1.9608% 90%);
+  --muted-foreground: hsl(210 25% 7.8431%);
+  --accent: hsl(36 100% 50%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(356.3033 90.5579% 54.3137%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(201.4286 30.4348% 90.9804%);
+  --input: hsl(200 23.0769% 97.4510%);
+  --ring: hsl(207 100% 42%);
+  --chart-1: hsl(207 100% 42%);
+  --chart-2: hsl(142 69% 58%);
+  --chart-3: hsl(36 100% 50%);
+  --chart-4: hsl(147.1429 78.5047% 41.9608%);
+  --chart-5: hsl(341.4894 75.2000% 50.9804%);
+  --sidebar: hsl(180 6.6667% 97.0588%);
+  --sidebar-foreground: hsl(210 25% 7.8431%);
+  --sidebar-primary: hsl(207 100% 42%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(211.5789 51.3514% 92.7451%);
+  --sidebar-accent-foreground: hsl(207 100% 42%);
+  --sidebar-border: hsl(205.0000 25.0000% 90.5882%);
+  --sidebar-ring: hsl(207 100% 42%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(207 100% 42% / 0.05);
+  --shadow-xs: 0px 1px 2px 0px hsl(207 100% 42% / 0.05);
+  --shadow-sm: 0px 1px 3px 0px hsl(207 100% 42% / 0.1), 0px 1px 2px -1px hsl(207 100% 42% / 0.1);
+  --shadow: 0px 1px 3px 0px hsl(207 100% 42% / 0.1), 0px 1px 2px -1px hsl(207 100% 42% / 0.1);
+  --shadow-md: 0px 4px 6px -1px hsl(207 100% 42% / 0.1), 0px 2px 4px -2px hsl(207 100% 42% / 0.1);
+  --shadow-lg: 0px 10px 15px -3px hsl(207 100% 42% / 0.1), 0px 4px 6px -4px hsl(207 100% 42% / 0.1);
+  --shadow-xl: 0px 20px 25px -5px hsl(207 100% 42% / 0.1), 0px 8px 10px -6px hsl(207 100% 42% / 0.1);
+  --shadow-2xl: 0px 25px 50px -12px hsl(207 100% 42% / 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  
+  /* TatuTicket specific colors */
+  --tt-primary: hsl(207 100% 42%);
+  --tt-secondary: hsl(210 9% 26%);
+  --tt-accent: hsl(36 100% 50%);
+  --tt-success: hsl(142 69% 58%);
+  --tt-warning: hsl(36 100% 50%);
+  --tt-error: hsl(356 91% 55%);
+  --tt-surface: hsl(0 0% 100%);
+  --tt-background: hsl(0 0% 98%);
+  --tt-blue-50: hsl(214 100% 97%);
+  --tt-blue-100: hsl(214 95% 93%);
+  --tt-blue-600: hsl(221 83% 53%);
+}
+
+.dark {
+  --background: hsl(0 0% 0%);
+  --foreground: hsl(200 6.6667% 91.1765%);
+  --card: hsl(228 9.8039% 10%);
+  --card-foreground: hsl(0 0% 85.0980%);
+  --popover: hsl(0 0% 0%);
+  --popover-foreground: hsl(200 6.6667% 91.1765%);
+  --primary: hsl(207 100% 42%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(195.0000 15.3846% 94.9020%);
+  --secondary-foreground: hsl(210 25% 7.8431%);
+  --muted: hsl(0 0% 9.4118%);
+  --muted-foreground: hsl(210 3.3898% 46.2745%);
+  --accent: hsl(205.7143 70% 7.8431%);
+  --accent-foreground: hsl(207 100% 42%);
+  --destructive: hsl(356.3033 90.5579% 54.3137%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(210 5.2632% 14.9020%);
+  --input: hsl(207.6923 27.6596% 18.4314%);
+  --ring: hsl(207 100% 42%);
+  --sidebar: hsl(228 9.8039% 10%);
+  --sidebar-foreground: hsl(0 0% 85.0980%);
+  --sidebar-primary: hsl(207 100% 42%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(205.7143 70% 7.8431%);
+  --sidebar-accent-foreground: hsl(207 100% 42%);
+  --sidebar-border: hsl(205.7143 15.7895% 26.0784%);
+  --sidebar-ring: hsl(207 100% 42%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* TatuTicket custom styles */
+.portal-btn {
+  @apply transition-colors duration-200;
+}
+
+.portal-btn.active {
+  background-color: var(--tt-primary);
+  color: white;
+}
+
+.nav-item {
+  @apply transition-colors duration-200;
+}
+
+.nav-item:hover {
+  @apply bg-gray-50;
+}
+
+.nav-item.active {
+  background-color: var(--tt-primary);
+  color: white;
+}
+
+.nav-item.admin-active {
+  background-color: hsl(356 91% 55%);
+  color: white;
+}
+
+.gradient-hero {
+  background: linear-gradient(to right, var(--tt-primary), var(--tt-blue-600));
+}
+
+.stats-card {
+  @apply bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow;
+}
+
+.ticket-priority-high {
+  @apply bg-red-100 text-red-800;
+}
+
+.ticket-priority-medium {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.ticket-priority-low {
+  @apply bg-green-100 text-green-800;
+}
+
+.ticket-priority-critical {
+  @apply bg-red-100 text-red-800;
+}
+
+.ticket-status-open {
+  @apply bg-red-100 text-red-800;
+}
+
+.ticket-status-in-progress {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.ticket-status-resolved {
+  @apply bg-green-100 text-green-800;
+}
+
+.ticket-status-closed {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.progress-bar {
+  @apply transition-all duration-500 ease-out;
+}
+
+.portal-content {
+  min-height: calc(100vh - 120px);
+}
+
+/* Loading states */
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .portal-content {
+    min-height: calc(100vh - 140px);
+  }
+}

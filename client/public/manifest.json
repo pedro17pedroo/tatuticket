@@ -1,0 +1,66 @@
+{
+  "name": "TatuTicket - Sistema de Gestão de Tickets",
+  "short_name": "TatuTicket",
+  "description": "Plataforma modular, multi-tenant e impulsionada por IA para transformar seu suporte ao cliente",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#1976D2",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMTk3NkQyIiByeD0iMjQiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KPHA+PHBhdGggZD0ibTMgOSAxIDFoMTZsIDEtMSIvPjwvcD4KPHA+PHBhdGggZD0iTTIxIDlWOGEyIDIgMCAwIDAtMi0yaC0xIi8+PC9wPgo8cD48cGF0aCBkPSJNMyA5VjhBMiAyIDAgMCAxIDUgNmgxIi8+PC9wPgo8cD48cGF0aCBkPSJNOSA5djEwaDZWOSIvPjwvcD4KPHA+PHBhdGggZD0ibTEyIDIgMS42IDMuNCAzLjQgMS42TDEzLjQgOSAxMiAxMS40IDEwLjYgOSA3IDcuNmwzLjQtMS42eiIvPjwvcD4KPC9zdmc+Cjwvc3ZnPgo=",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiBmaWxsPSIjMTk3NkQyIiByeD0iNjQiLz4KPHN2ZyB4PSIxMjgiIHk9IjEyOCIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxwYXRoIGQ9Im0zIDkgMSAxaDE2bCAxLTEiLz4KPHBhdGggZD0iTTIxIDlWOGEyIDIgMCAwIDAtMi0yaC0xIi8+CjxwYXRoIGQ9Ik0zIDlWOEEyIDIgMCAwIDEgNSA2aDEiLz4KPHBhdGggZD0iTTkgOXYxMGg2VjkiLz4KPHBhdGggZD0ibTEyIDIgMS42IDMuNCAzLjQgMS42TDEzLjQgOSAxMiAxMS40IDEwLjYgOSA3IDcuNmwzLjQtMS42eiIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIHZpZXdCb3g9IjAgMCAxMjgwIDcyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjRkFGQUZBIi8+Cjx0ZXh0IHg9IjY0MCIgeT0iMzYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMTk3NkQyIiBmb250LXNpemU9IjQ4IiBmb250LWZhbWlseT0iQXJpYWwiPgpUYXR1VGlja2V0IC0gU2lzdGVtYSBkZSBHZXN0w6NvIGRlIFRpY2tldHMKPC90ZXh0Pgo8L3N2Zz4=",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Portal SaaS",
+      "short_name": "SaaS",
+      "description": "Acesse o portal de prospecção e vendas",
+      "url": "/",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMTk3NkQyIiByeD0iMTIiLz4KPHN2ZyB4PSIyNCIgeT0iMjQiIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiI+CjxwYXRoIGQ9Ik0xNiAyMUwxMiAxN0w4IDIxSDNWMTJMMTIgM0wyMSAxMlYyMUgxNloiLz4KPC9zdmc+Cjwvc3ZnPg==",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Portal Empresas",
+      "short_name": "Empresas",
+      "description": "Acesse o portal organizacional",
+      "url": "/organization",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjNDI0MjQyIiByeD0iMTIiLz4KPHN2ZyB4PSIyNCIgeT0iMjQiIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiI+CjxwYXRoIGQ9Ik0zIDIxSDE5QTIgMiAwIDAgMCAyMSAxOVY5QTIgMiAwIDAgMCAxOSA3SDVBMiAyIDAgMCAwIDMgOVYyMVoiLz4KPHBhdGggZD0iTTcgN1Y1QTIgMiAwIDAgMSA5IDNIMTVBMiAyIDAgMCAxIDE3IDVWN00zIDEzSDIxIi8+Cjwvc3ZnPgo8L3N2Zz4=",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
