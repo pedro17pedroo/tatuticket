@@ -13,14 +13,14 @@ const portalConfig = [
   { id: 'saas' as PortalType, label: 'Portal SaaS', public: true },
   { id: 'organization' as PortalType, label: 'Portal das Organizações', public: false },
   { id: 'customer' as PortalType, label: 'Portal dos Clientes', public: false },
-  { id: 'admin' as PortalType, label: 'Portal Admin', public: false },
+  // Admin portal is hidden from navigation - only accessible via direct URL
 ];
 
 export function PortalNavigation({ currentPortal, onPortalChange }: PortalNavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const user = authService.getCurrentUser();
 
-  const availablePortals = portalConfig; // Show all portals, handle access in click handler
+  const availablePortals = portalConfig; // Show main portals, admin hidden for security
 
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
