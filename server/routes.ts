@@ -582,7 +582,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sort articles by AI relevance score
           if (rankings.rankings) {
             const scoreMap = new Map(rankings.rankings.map((r: any) => [r.id, r.relevance_score]));
-            filteredArticles.sort((a, b) => (scoreMap.get(b.id) || 0) - (scoreMap.get(a.id) || 0));
+            filteredArticles.sort((a, b) => {
+              const scoreA = Number(scoreMap.get(a.id)) || 0;
+              const scoreB = Number(scoreMap.get(b.id)) || 0;
+              return scoreB - scoreA;
+            });
           }
         } catch (aiError) {
           console.log("AI ranking failed, using basic search:", aiError);
