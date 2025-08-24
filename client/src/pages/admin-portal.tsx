@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GlobalUserManagement } from "@/components/admin/global-user-management";
 import type { NavigationItem, GlobalStats } from "@/types/portal";
 import type { Tenant, InsertTenant } from "@shared/schema";
 
@@ -197,44 +198,57 @@ export function AdminPortal() {
         {/* Admin Main Content */}
         <div className="flex-1 overflow-auto">
           <div className="p-8">
-            {/* Global Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-              <StatsCard
-                title="Total Tenants"
-                value={isLoadingStats ? "..." : globalStats?.totalTenants || 0}
-                icon="fa-building"
-                iconColor="bg-blue-100 text-blue-600"
-              />
-              <StatsCard
-                title="Usuários Ativos"
-                value={isLoadingStats ? "..." : globalStats?.totalUsers || 0}
-                icon="fa-users"
-                iconColor="bg-green-100 text-green-600"
-              />
-              <StatsCard
-                title="Tickets/Dia"
-                value={isLoadingStats ? "..." : globalStats?.totalTickets || 0}
-                icon="fa-ticket-alt"
-                iconColor="bg-yellow-100 text-yellow-600"
-              />
-              <StatsCard
-                title="Receita MRR"
-                value="R$ 180K"
-                icon="fa-dollar-sign"
-                iconColor="bg-green-100 text-green-600"
-              />
-              <StatsCard
-                title="Uptime"
-                value="99.9%"
-                icon="fa-server"
-                iconColor="bg-green-100 text-green-600"
-              />
-            </div>
+            {/* Dashboard Tab */}
+            {activeNavItem === 'dashboard' && (
+              <>
+                {/* Global Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                  <StatsCard
+                    title="Total Tenants"
+                    value={isLoadingStats ? "..." : globalStats?.totalTenants || 0}
+                    icon="fa-building"
+                    iconColor="bg-blue-100 text-blue-600"
+                  />
+                  <StatsCard
+                    title="Usuários Ativos"
+                    value={isLoadingStats ? "..." : globalStats?.totalUsers || 0}
+                    icon="fa-users"
+                    iconColor="bg-green-100 text-green-600"
+                  />
+                  <StatsCard
+                    title="Tickets/Dia"
+                    value={isLoadingStats ? "..." : globalStats?.totalTickets || 0}
+                    icon="fa-ticket-alt"
+                    iconColor="bg-yellow-100 text-yellow-600"
+                  />
+                  <StatsCard
+                    title="Receita MRR"
+                    value="R$ 180K"
+                    icon="fa-dollar-sign"
+                    iconColor="bg-green-100 text-green-600"
+                  />
+                  <StatsCard
+                    title="Uptime"
+                    value="99.9%"
+                    icon="fa-server"
+                    iconColor="bg-green-100 text-green-600"
+                  />
+                </div>
+              </>
+            )}
 
-            {/* Tenant Management */}
-            <Card className="mb-8">
-              <CardHeader>
-                <div className="flex justify-between items-center">
+            {/* Users Management Tab */}
+            {activeNavItem === 'users' && (
+              <GlobalUserManagement />
+            )}
+
+            {/* Tenants Tab */}
+            {(activeNavItem === 'dashboard' || activeNavItem === 'tenants') && (
+              <>
+                {/* Tenant Management */}
+                <Card className="mb-8">
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
                   <CardTitle>Gerenciamento de Tenants</CardTitle>
                   <Dialog open={isCreateTenantOpen} onOpenChange={setIsCreateTenantOpen}>
                     <DialogTrigger asChild>
@@ -372,8 +386,8 @@ export function AdminPortal() {
               </CardContent>
             </Card>
 
-            {/* System Status and Audit Logs */}
-            <div className="grid lg:grid-cols-2 gap-8">
+                {/* System Status and Audit Logs */}
+                <div className="grid lg:grid-cols-2 gap-8">
               <Card>
                 <CardHeader>
                   <CardTitle>Status do Sistema</CardTitle>
@@ -433,7 +447,18 @@ export function AdminPortal() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+                </div>
+              </>
+            )}
+
+            {/* Other navigation items - placeholder for future implementation */}
+            {!['dashboard', 'users', 'tenants'].includes(activeNavItem) && (
+              <div className="flex flex-col items-center justify-center h-64">
+                <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
+                <p className="text-gray-600">Esta funcionalidade será implementada em breve.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

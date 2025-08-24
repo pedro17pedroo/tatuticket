@@ -13,6 +13,7 @@ import { CustomerManagement } from "@/components/organization/customer-managemen
 import { AgentManagement } from "@/components/organization/agent-management";
 import { AdvancedAnalytics } from "@/components/organization/advanced-analytics";
 import { KnowledgeManagement } from "@/components/organization/knowledge-management";
+import { AIInsights } from "@/components/organization/ai-insights";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -28,6 +29,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'slas', label: 'SLAs', icon: 'fa-clock', href: '#' },
   { id: 'reports', label: 'Relatórios', icon: 'fa-chart-bar', href: '#' },
   { id: 'knowledge', label: 'Base de Conhecimento', icon: 'fa-book', href: '#' },
+  { id: 'ai-insights', label: 'Insights de IA', icon: 'fa-brain', href: '#' },
   { id: 'settings', label: 'Configurações', icon: 'fa-cog', href: '#' },
 ];
 
@@ -356,8 +358,13 @@ export function OrganizationPortal() {
               <KnowledgeManagement />
             )}
             
+            {/* AI Insights */}
+            {activeNavItem === 'ai-insights' && (
+              <AIInsights />
+            )}
+            
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge'].includes(activeNavItem) && (
+            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge', 'ai-insights'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>

@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         messages: [
           {
             role: "system",
-            content: "You are an AI assistant for a ticket management system. Analyze the ticket and provide categorization, priority recommendation, and sentiment analysis. Respond with JSON in this format: { 'category': string, 'priority': 'low'|'medium'|'high'|'critical', 'sentiment': 'positive'|'neutral'|'negative', 'urgency_score': number, 'recommended_department': string, 'summary': string }"
+            content: "You are an AI assistant for a ticket management system. Analyze the ticket and provide categorization, priority recommendation, sentiment analysis, and predictions. Respond with JSON in this format: { 'category': string, 'priority': 'low'|'medium'|'high'|'critical', 'sentiment': 'positive'|'neutral'|'negative', 'sentiment_score': number, 'urgency_score': number, 'recommended_department': string, 'summary': string, 'predicted_resolution_time': number, 'escalation_risk': 'low'|'medium'|'high', 'suggested_actions': string[] }"
           },
           {
             role: "user",
@@ -656,6 +656,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ ticket, aiAnalysis });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  // AI Insights and Predictions
+  app.get("/api/ai/insights", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
+
+      const { tenantId } = req.query;
+      if (!tenantId) {
+        return res.status(400).json({ message: "tenantId is required" });
+      }
+
+      // Get recent tickets for analysis
+      const tickets = await storage.getTicketsByTenant(tenantId as string);
+      const recentTickets = tickets.slice(0, 50); // Last 50 tickets
+
+      if (recentTickets.length === 0) {
+        return res.json({ insights: [], trends: [], recommendations: [] });
+      }
+
+      // Prepare data for AI analysis
+      const ticketSummary = recentTickets.map(t => ({
+        id: t.id,
+        subject: t.subject,
+        status: t.status,
+        priority: t.priority,
+        category: t.category,
+        created: t.createdAt,
+        resolved: t.resolvedAt
+      }));
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI analyst for a ticket management system. Analyze the ticket data and provide insights, trends, and recommendations. Respond with JSON: { 'insights': string[], 'trends': [{ 'type': string, 'description': string, 'impact': 'positive'|'negative'|'neutral' }], 'recommendations': [{ 'priority': 'high'|'medium'|'low', 'action': string, 'rationale': string }], 'performance_score': number, 'predictions': [{ 'metric': string, 'prediction': string, 'confidence': number }] }"
+          },
+          {
+            role: "user",
+            content: `Analyze these ticket patterns:\n${JSON.stringify(ticketSummary, null, 2)}`
+          }
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const insights = JSON.parse(response.choices[0].message.content!);
+      res.json(insights);
+    } catch (error: any) {
+      res.status(500).json({ message: "AI insights failed: " + error.message });
+    }
+  });
+
+  // Real-time sentiment analysis
+  app.post("/api/ai/sentiment", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
+
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ message: "Text is required" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "Analyze the sentiment of the given text. Respond with JSON: { 'sentiment': 'positive'|'neutral'|'negative', 'confidence': number, 'emotional_indicators': string[], 'urgency_level': 'low'|'medium'|'high', 'recommended_response_tone': string }"
+          },
+          {
+            role: "user",
+            content: `Analyze sentiment: ${text}`
+          }
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const sentiment = JSON.parse(response.choices[0].message.content!);
+      res.json(sentiment);
+    } catch (error: any) {
+      res.status(500).json({ message: "Sentiment analysis failed: " + error.message });
+    }
+  });
+
+  // Escalation risk assessment
+  app.post("/api/ai/escalation-risk", async (req, res) => {
+    try {
+      if (!openai) {
+        return res.status(503).json({ message: "AI service not available" });
+      }
+
+      const { ticketId } = req.body;
+      if (!ticketId) {
+        return res.status(400).json({ message: "ticketId is required" });
+      }
+
+      const ticket = await storage.getTicket(ticketId);
+      if (!ticket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      // Calculate time since creation
+      const hoursSinceCreation = Math.floor((Date.now() - new Date(ticket.createdAt!).getTime()) / (1000 * 60 * 60));
+      const slaBreached = ticket.slaDeadline && new Date(ticket.slaDeadline) < new Date();
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "Assess escalation risk for a support ticket. Respond with JSON: { 'risk_level': 'low'|'medium'|'high'|'critical', 'risk_factors': string[], 'recommended_actions': string[], 'escalation_probability': number, 'time_to_escalation': number }"
+          },
+          {
+            role: "user",
+            content: `Assess ticket: Subject: ${ticket.subject}, Priority: ${ticket.priority}, Status: ${ticket.status}, Hours since creation: ${hoursSinceCreation}, SLA breached: ${slaBreached}`
+          }
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const riskAssessment = JSON.parse(response.choices[0].message.content!);
+      res.json(riskAssessment);
+    } catch (error: any) {
+      res.status(500).json({ message: "Escalation risk assessment failed: " + error.message });
+    }
+  });
+
+  // Admin Routes - Global Management
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      // Check if user has admin privileges
+      // For now, assume any logged in user has access, in production add proper auth
+      const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+      
+      // Don't return passwords
+      const safeUsers = allUsers.map(({ password, ...user }) => user);
+      
+      res.json(safeUsers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      
+      // Don't return password
+      const { password, ...userResponse } = user;
+      
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: userData.tenantId || null,
+        action: "admin_user_created",
+        resourceType: "user",
+        resourceId: user.id,
+        metadata: { username: user.username, role: user.role },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.status(201).json(userResponse);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      
+      // If password is empty, remove it from updates
+      if (updates.password === "") {
+        delete updates.password;
+      }
+      
+      const user = await storage.updateUser(req.params.id, updates);
+      
+      // Don't return password
+      const { password, ...userResponse } = user;
+      
+      await storage.createAuditLog({
+        userId: req.params.id,
+        tenantId: user.tenantId,
+        action: "admin_user_updated",
+        resourceType: "user", 
+        resourceId: user.id,
+        metadata: { updates: Object.keys(updates) },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json(userResponse);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      await db.delete(users).where(eq(users.id, req.params.id));
+      
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: null,
+        action: "admin_user_deleted",
+        resourceType: "user",
+        resourceId: req.params.id,
+        metadata: {},
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/tenants", async (req, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      res.json(tenants);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
