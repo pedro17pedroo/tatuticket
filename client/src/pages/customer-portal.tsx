@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { authService } from "@/lib/auth";
+import type { Ticket } from "@shared/schema";
 
 const quickActions = [
   {
@@ -69,11 +71,16 @@ const getStatusBadge = (status: string) => {
 
 export function CustomerPortal() {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
   const user = authService.getCurrentUser();
   const tenantId = authService.getTenantId();
 
-  const { data: customerTickets, isLoading } = useQuery({
-    queryKey: ['/api/tickets', { customerId: user?.id }],
+  const { data: customerTickets, isLoading } = useQuery<Ticket[]>({
+    queryKey: ['/api/tickets', user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/tickets?customerId=${user?.id}`);
+      return response.json();
+    },
     enabled: !!user?.id,
   });
 
@@ -93,7 +100,24 @@ export function CustomerPortal() {
 
   const handleQuickAction = (action: string) => {
     setSelectedAction(action);
-    // Implementar ações específicas aqui
+    
+    switch (action) {
+      case 'new-ticket':
+        setIsCreateTicketOpen(true);
+        break;
+      case 'my-tickets':
+        // Scroll to tickets section
+        document.getElementById('tickets-section')?.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'knowledge-base':
+        // Navigate to knowledge base (future implementation)
+        console.log('Knowledge base clicked');
+        break;
+      case 'reports':
+        // Show reports modal (future implementation)
+        console.log('Reports clicked');
+        break;
+    }
   };
 
   return (
@@ -190,7 +214,7 @@ export function CustomerPortal() {
         </div>
 
         {/* Recent Tickets */}
-        <Card>
+        <Card id="tickets-section">
           <CardHeader>
             <CardTitle>Meus Tickets Recentes</CardTitle>
           </CardHeader>
@@ -214,11 +238,11 @@ export function CustomerPortal() {
                         <div className="loading-skeleton h-4 w-full"></div>
                       </td>
                     </tr>
-                  ) : (
-                    mockTickets.map((ticket) => (
+                  ) : customerTickets && customerTickets.length > 0 ? (
+                    customerTickets.map((ticket) => (
                       <tr key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {ticket.id}
+                          {ticket.ticketNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {ticket.subject}
@@ -227,10 +251,10 @@ export function CustomerPortal() {
                           {getStatusBadge(ticket.status)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {ticket.createdAt}
+                          {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('pt-BR') : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {ticket.updatedAt}
+                          {ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleDateString('pt-BR') : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <Button 
@@ -243,6 +267,19 @@ export function CustomerPortal() {
                         </td>
                       </tr>
                     ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                        <div className="flex flex-col items-center py-8">
+                          <i className="fas fa-ticket-alt text-4xl text-gray-300 mb-4"></i>
+                          <p className="text-lg font-medium mb-2">Nenhum ticket encontrado</p>
+                          <p className="text-sm mb-4">Você ainda não criou nenhum ticket de suporte.</p>
+                          <Button onClick={() => setIsCreateTicketOpen(true)} data-testid="button-create-first-ticket">
+                            <i className="fas fa-plus mr-2"></i>Criar Primeiro Ticket
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -250,6 +287,12 @@ export function CustomerPortal() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Ticket Dialog */}
+      <CreateTicketDialog
+        isOpen={isCreateTicketOpen}
+        onClose={() => setIsCreateTicketOpen(false)}
+      />
     </div>
   );
 }
