@@ -11,8 +11,8 @@ interface PortalNavigationProps {
 
 const portalConfig = [
   { id: 'saas' as PortalType, label: 'Portal SaaS', public: true },
-  { id: 'organization' as PortalType, label: 'Portal Empresas', public: false },
-  { id: 'customer' as PortalType, label: 'Portal Clientes', public: false },
+  { id: 'organization' as PortalType, label: 'Portal das Organizações', public: false },
+  { id: 'customer' as PortalType, label: 'Portal dos Clientes', public: false },
   { id: 'admin' as PortalType, label: 'Portal Admin', public: false },
 ];
 
@@ -20,9 +20,7 @@ export function PortalNavigation({ currentPortal, onPortalChange }: PortalNaviga
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const user = authService.getCurrentUser();
 
-  const availablePortals = portalConfig.filter(portal => 
-    portal.public || authService.canAccessPortal(portal.id)
-  );
+  const availablePortals = portalConfig; // Show all portals, handle access in click handler
 
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
