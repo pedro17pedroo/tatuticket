@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { authService, type RegisterData } from "@/lib/auth";
+import { FAQSection } from "@/components/saas/faq-section";
+import { OnboardingWizard } from "@/components/saas/onboarding-wizard";
 import type { PricingPlan } from "@/types/portal";
 
 const features = [
@@ -98,6 +100,7 @@ const pricingPlans: PricingPlan[] = [
 
 export function SaasPortal() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"freemium" | "pro" | "enterprise">("freemium");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -148,7 +151,10 @@ export function SaasPortal() {
                 <Button 
                   size="lg"
                   className="bg-white text-primary hover:bg-gray-100"
-                  onClick={() => setIsOnboardingOpen(true)}
+                  onClick={() => {
+                    setSelectedPlan("pro");
+                    setIsOnboardingOpen(true);
+                  }}
                   data-testid="button-free-trial"
                 >
                   Teste Grátis 14 Dias
@@ -244,7 +250,10 @@ export function SaasPortal() {
                   <Button 
                     className={`w-full ${plan.popular ? 'bg-primary hover:bg-blue-700' : ''}`}
                     variant={plan.popular ? "default" : "outline"}
-                    onClick={() => setIsOnboardingOpen(true)}
+                    onClick={() => {
+                      setSelectedPlan(plan.id as any);
+                      setIsOnboardingOpen(true);
+                    }}
                     data-testid={`button-plan-${plan.id}`}
                   >
                     {plan.buttonText}
@@ -269,7 +278,10 @@ export function SaasPortal() {
             <Button 
               size="lg"
               className="bg-white text-primary hover:bg-gray-100"
-              onClick={() => setIsOnboardingOpen(true)}
+              onClick={() => {
+                setSelectedPlan("freemium");
+                setIsOnboardingOpen(true);
+              }}
               data-testid="button-create-account"
             >
               Criar Conta Grátis
@@ -286,76 +298,15 @@ export function SaasPortal() {
         </div>
       </section>
 
-      {/* Onboarding Modal */}
-      <Dialog open={isOnboardingOpen} onOpenChange={setIsOnboardingOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Criar Conta</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Nome da Empresa</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Ex: Acme Corp"
-                value={registerForm.username}
-                onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value }))}
-                required
-                data-testid="input-company-name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email Corporativo</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@empresa.com"
-                value={registerForm.email}
-                onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-                required
-                data-testid="input-email"
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={registerForm.password}
-                onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
-                required
-                data-testid="input-password"
-              />
-            </div>
-            <div>
-              <Label htmlFor="plan">Plano</Label>
-              <Select defaultValue="freemium">
-                <SelectTrigger data-testid="select-plan">
-                  <SelectValue placeholder="Selecione um plano" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="freemium">Freemium (Grátis)</SelectItem>
-                  <SelectItem value="pro">Pro (R$ 29/agente)</SelectItem>
-                  <SelectItem value="enterprise">Enterprise (Personalizado)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-              data-testid="button-submit-registration"
-            >
-              {isLoading ? "Criando..." : "Criar Conta e Começar Teste"}
-            </Button>
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Ao criar uma conta, você concorda com nossos Termos de Serviço e Política de Privacidade
-            </p>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* FAQ Section */}
+      <FAQSection />
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        initialPlan={selectedPlan}
+      />
     </div>
   );
 }

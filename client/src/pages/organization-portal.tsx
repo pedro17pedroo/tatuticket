@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DepartmentManagement } from "@/components/organization/department-management";
+import { TeamManagement } from "@/components/organization/team-management";
+import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
 import type { NavigationItem, TicketStats } from "@/types/portal";
@@ -12,6 +16,7 @@ import type { NavigationItem, TicketStats } from "@/types/portal";
 const navigationItems: NavigationItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer-alt', href: '#', active: true },
   { id: 'tickets', label: 'Tickets', icon: 'fa-ticket-alt', href: '#' },
+  { id: 'structure', label: 'Estrutura', icon: 'fa-sitemap', href: '#' },
   { id: 'customers', label: 'Clientes', icon: 'fa-users', href: '#' },
   { id: 'agents', label: 'Agentes', icon: 'fa-user-tie', href: '#' },
   { id: 'slas', label: 'SLAs', icon: 'fa-clock', href: '#' },
@@ -79,6 +84,7 @@ const getPriorityBadge = (priority: string) => {
 
 export function OrganizationPortal() {
   const [activeNavItem, setActiveNavItem] = useState('dashboard');
+  const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
   const user = authService.getCurrentUser();
   const tenantId = authService.getTenantId();
 
@@ -161,6 +167,8 @@ export function OrganizationPortal() {
         {/* Main Content */}
         <div className="flex-1 overflow-auto">
           <div className="p-8">
+            {activeNavItem === 'dashboard' && (
+            <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatsCard
@@ -198,7 +206,7 @@ export function OrganizationPortal() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Tickets Recentes</CardTitle>
-                  <Button data-testid="button-new-ticket">
+                  <Button onClick={() => setIsCreateTicketOpen(true)} data-testid="button-new-ticket">
                     <i className="fas fa-plus mr-2"></i>Novo Ticket
                   </Button>
                 </div>
@@ -294,7 +302,55 @@ export function OrganizationPortal() {
                 </CardContent>
               </Card>
             </div>
+            </>
+            )}
+            
+            {/* Structure Management */}
+            {activeNavItem === 'structure' && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestão de Estrutura</h1>
+                  <p className="text-gray-600">Organize departamentos e equipes da sua organização</p>
+                </div>
+                
+                <Tabs defaultValue="departments" className="space-y-6">
+                  <TabsList>
+                    <TabsTrigger value="departments" data-testid="tab-departments">
+                      <i className="fas fa-building mr-2"></i>
+                      Departamentos
+                    </TabsTrigger>
+                    <TabsTrigger value="teams" data-testid="tab-teams">
+                      <i className="fas fa-users mr-2"></i>
+                      Equipes
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="departments">
+                    <DepartmentManagement />
+                  </TabsContent>
+                  
+                  <TabsContent value="teams">
+                    <TeamManagement />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+            
+            {/* Other navigation items - placeholder for future implementation */}
+            {!['dashboard', 'structure'].includes(activeNavItem) && (
+              <div className="flex flex-col items-center justify-center h-64">
+                <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
+                <p className="text-gray-600">Esta funcionalidade será implementada em breve.</p>
+              </div>
+            )}
           </div>
+          
+          {/* Create Ticket Dialog */}
+          <CreateTicketDialog
+            isOpen={isCreateTicketOpen}
+            onClose={() => setIsCreateTicketOpen(false)}
+          />
         </div>
       </div>
     </div>

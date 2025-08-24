@@ -37,6 +37,9 @@ export const departments = pgTable("departments", {
   name: text("name").notNull(),
   description: text("description"),
   tenantId: varchar("tenant_id").notNull(),
+  managerEmail: text("manager_email"),
+  slaConfig: jsonb("sla_config"), // { criticalHours, highHours, mediumHours, lowHours }
+  status: text("status").notNull().default("active"), // active, inactive
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -48,6 +51,11 @@ export const teams = pgTable("teams", {
   description: text("description"),
   departmentId: varchar("department_id").notNull(),
   tenantId: varchar("tenant_id").notNull(),
+  leaderId: varchar("leader_id"), // team leader user id
+  maxCapacity: integer("max_capacity").default(5),
+  currentSize: integer("current_size").default(0),
+  specialties: jsonb("specialties"), // array of specializations
+  status: text("status").notNull().default("active"), // active, inactive
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
