@@ -1,0 +1,137 @@
+# Product Requirements Document (PRD) - TatuTicket
+
+## 1. Introdução
+
+### 1.1 Objetivo
+
+Este documento define os requisitos para o **TatuTicket**, uma plataforma de gestão de tickets baseada em nuvem, projetada para superar os sistemas existentes no mercado. O sistema é modular, multi-tenant, altamente escalável e seguro, com interfaces responsivas otimizadas para desktop e dispositivos móveis. Ele suporta criação de tickets omnicanal, gestão de SLAs, rastreamento de tempo, alocação de custos, análises avançadas e automação com IA, integrando-se a sistemas internos (ex.: CRM, ERP) e externos (ex.: Slack, Jira) via APIs. Como plataforma SaaS (Software as a Service), o TatuTicket oferece acesso remoto e escalável, mas também permite instalação on-premise na infraestrutura do cliente para empresas que preferem evitar modelos baseados em nuvem por razões de conformidade, controle de dados ou restrições regulatórias. Essa flexibilidade garante que o sistema atenda a diversas preferências operacionais, com módulos independentes que podem ser ativados ou desativados conforme necessário. As funcionalidades são separadas por portais distintos para garantir clareza, segurança e usabilidade, com o Portal de Admin tendo controle total sobre todos os aspectos do sistema, incluindo gerenciamento de contas, configurações globais e auditoria de todos os portais.
+
+### 1.2 Escopo
+
+O TatuTicket será uma Progressive Web App (PWA) acessível em navegadores modernos, eliminando a necessidade de aplicativos nativos, mas com suporte a instalação on-premise para cenários não-SaaS. Ele atenderá a empresas de todos os tamanhos, oferecendo personalização granular, conformidade com LGPD e GDPR, e uma experiência de usuário premium. Este PRD cobre funcionalidades existentes, adicionadas e sugeridas, com ênfase na separação por portais: Portal SaaS (para prospecção e onboarding), Portal das Organizações/Empresas (para gestão interna), Portal dos Clientes Finais (para autoatendimento), e Portal de Admin (para gerenciamento global). A arquitetura técnica (sem definição de stack) garante que o Portal de Admin possa configurar, monitorar e gerenciar todas as funcionalidades de outros portais. Requisitos não funcionais, planos financeiros e de subscrição, e um plano de melhorias contínuas também são incluídos. O foco é em modularidade, permitindo que módulos como gestão de SLAs, bolsa de horas ou automação de IA sejam configurados independentemente por portal.
+
+### 1.3 Público-Alvo
+
+- **Usuários do Portal SaaS**: Empresas prospectivas interessadas em informações, planos e criação de contas. Dores incluem falta de clareza em onboarding, resolvidas com processos guiados.
+- **Usuários do Portal das Organizações/Empresas**: Equipes internas (agentes, gerentes, administradores) que gerenciam operações e clientes. Dores como complexidade em estruturas organizacionais são mitigadas com configurações granulares.
+- **Usuários do Portal dos Clientes Finais**: Clientes das empresas que criam e acompanham tickets. Dores incluem visibilidade limitada, resolvidas com dashboards personalizados.
+- **Usuários do Portal de Admin**: Super administradores que gerenciam o sistema inteiro. Eles controlam todos os portais, abordando dores de centralização.
+
+## 2. Visão do Produto
+
+O TatuTicket redefine a gestão de tickets, oferecendo uma plataforma web fluida, personalizável e impulsionada por IA, com transparência financeira e operacional. Acessível via portais dedicados em qualquer navegador ou instalado on-premise, promove satisfação do cliente, eficiência e lucratividade, com interfaces modernas, rápidas e acessíveis. Como SaaS, ele reduz custos de manutenção, mas a opção on-premise atende a requisitos específicos. A separação por portais garante que cada público acesse apenas o necessário, com o Portal de Admin como hub central para gerenciamento total.
+
+## 3. Objetivos do Produto
+
+- Entregar uma aplicação web modular e personalizável, adaptada aos fluxos de suporte, com opções SaaS ou on-premise, e funcionalidades segregadas por portal.
+- Implementar IA para priorização e automações, mitigando ineficiências, acessíveis via portais relevantes.
+- Suportar criação omnicanal de tickets, com roteamento baseado em estruturas organizacionais.
+- Oferecer SLAs, rastreamento de tempo, custos e modelos financeiros flexíveis, configuráveis por portal.
+- Garantir compatibilidade com navegadores e PWA, com controle total via Portal de Admin.
+- Alcançar 99.9% de disponibilidade e conformidade regulatória.
+- Reduzir custos por ticket em 50% e aumentar CSAT para >95%, com métricas monitoradas centralmente.
+
+## 4. Requisitos Funcionais
+
+Todos os requisitos são modulares e configuráveis via Portal de Admin, que permite ativar/desativar módulos por portal ou tenant. Categorias, tipos, prioridades, status, departamentos, equipes, subdivisões e seções são tabelas configuráveis, com interfaces para criação/edição. A segregação por portais garante isolamento: cada portal tem URL dedicada (ex.: saas.tatuticket.com, empresas.tatuticket.com), autenticação separada e permissões RBAC. O Portal de Admin gerencia todos os portais, incluindo criação de contas, configurações e auditoria.
+
+### 4.1 Portal SaaS (Prospecção e Onboarding)
+
+Este portal é o ponto de entrada público para empresas prospectivas, focado em informações, vendas e criação de contas. Não requer login inicial, mas guia para onboarding. Funcionalidades:
+- **Informações sobre TatuTicket**: Páginas estáticas/dinâmicas explicando como funciona, módulos disponíveis (ex.: SLAs, IA, integrações), benefícios, casos de uso e depoimentos.
+- **Suporte e FAQs**: Seção de perguntas frequentes, chat de suporte pré-venda (via chatbot ou agente humano), formulário de contato com campos (nome, e-mail, mensagem) e integração com e-mail para respostas.
+- **Planos Disponíveis**: Tabela comparativa de planos (Freemium, Pro, Enterprise), com detalhes de funcionalidades, preços, limites (ex.: tickets/mês) e opções de customização (SaaS vs. on-premise).
+- **Criação de Conta e Onboarding**: Processo guiado com passos:
+  - Formulário de registro: Nome da empresa, e-mail, senha, plano selecionado, dados de pagamento (integração com gateways como Stripe para cartão, boleto, Pix).
+  - Validação OTP: Envio de código via e-mail/SMS para confirmação de conta, com expiração configurável (ex.: 5min).
+  - Pagamento Inicial: Processamento seguro para planos pagos, com opções de teste gratuito (ex.: 14 dias).
+  - Onboarding Interativo: Após registro, tutorial guiado com vídeos, checklists (ex.: configurar departamentos, integrar APIs) e assistente IA para setup inicial.
+- **Entrar/Login**: Formulário de autenticação com SSO, recuperação de senha via OTP e redirecionamento automático para Portal das Organizações após login.
+- **Contato e Demo**: Botão para agendar demo, formulário de lead capture e integração com CRM para tracking.
+
+O Portal de Admin gerencia conteúdos (ex.: atualizar FAQs), planos e integrações de pagamento deste portal.
+
+### 4.2 Portal das Organizações/Empresas (Gestão Interna)
+
+Este portal é acessível apenas após login por usuários de empresas clientes (tenants), focado em gerenciamento operacional, de clientes e estruturas. Funcionalidades separadas por roles (agente, gerente, admin do tenant):
+- **Gestão de Estrutura Organizacional**: Configuração de departamentos, equipes, subdivisões, seções via tabelas editáveis. Mapeamento para roteamento de tickets (ex.: ticket de finanças > departamento financeiro > equipe contas a pagar).
+- **Gestão de Usuários Internos**: Criação/edição de contas para agentes, gerentes (com roles, permissões granulares como "gerenciar SLAs" ou "ver relatórios financeiros"). Suporte a hierarquia (ex.: gerente aprova novos usuários).
+- **Gestão de Clientes Finais**: Cadastro e gerenciamento de sub-clientes (clientes da empresa), incluindo atribuição de bolsas de horas, SLAs, tiers e estruturas (ex.: filiais do cliente final).
+- **Gestão de Tickets**: Criação/atribuição/monitoramento omnicanal, roteamento inteligente por estrutura, mesclagem/divisão, chats interativos, upload de arquivos, histórico completo. Interfaces Kanban/tabela filtradas por departamento.
+- **Gestão de SLAs e Bolsa de Horas**: Configuração personalizada por cliente/departamento, monitoramento em tempo real, alertas, relatórios. Suporte a modelos (SLA-based, bolsa, híbrido) com explicações nos dashboards: "SLA: custos fixos por performance; Bolsa: pagamento por uso; Híbrido: combinação para flexibilidade".
+- **Rastreamento de Tempo e Custos**: Timers, alocação de custos por agente/departamento, análises de lucratividade, previsões orçamentárias.
+- **Automação com IA**: Categorização, sugestões, alertas preditivos, análise de sentimento, configuráveis por tenant.
+- **Base de Conhecimento**: Criação/edição de artigos, versionamento, aprovação por gerente.
+- **Relatórios e Análises**: Dashboards interativos filtrados por equipe/subdivisão, relatórios personalizados, CSAT/NPS.
+- **Integrações e Configurações**: Setup de APIs, webhooks, SSO; temas personalizados; gamificação para agentes.
+- **Gestão Financeira**: Configuração de taxas, métodos de pagamento, subscrições; relatórios de receita/custo por cliente/departamento.
+
+O Portal de Admin pode override configurações, auditar ações e gerenciar tenants deste portal.
+
+### 4.3 Portal dos Clientes Finais (Autoatendimento)
+
+Este portal é acessível por clientes das empresas (sub-usuários), focado em simplicidade e autoatendimento. Requer login via convite da empresa ou auto-registro validado. Funcionalidades limitadas para evitar sobrecarga:
+- **Gestão de Tickets**: Criação via omnicanal, acompanhamento de status/histórico, chats interativos com agentes, upload de arquivos, sugestões de autoatendimento via IA.
+- **Visualização de SLAs e Bolsa de Horas**: Dashboards com consumo de bolsa, timers de SLA, alertas de limites (sem configuração, apenas visual).
+- **Base de Conhecimento e FAQs**: Busca em artigos públicos/privados da empresa, recomendações automáticas.
+- **Gestão de Usuários Próprios**: Criação/edição de sub-usuários na estrutura do cliente (ex.: funcionários de filial), com permissões limitadas (ex.: ver tickets próprios).
+- **Relatórios Básicos**: Métricas pessoais (ex.: tickets resolvidos, CSAT), enquetes pós-resolução.
+- **Pagamentos e Financeiro**: Visualização de faturas/bolsas, pagamento de excedentes via gateways integrados (ex.: recarregar bolsa).
+- **Onboarding e Suporte**: Tutoriais guiados, chat com suporte da empresa, contato para escalonamento.
+
+O Portal de Admin e o Portal das Empresas gerenciam acessos, conteúdos e limites deste portal.
+
+### 4.4 Portal de Admin (Gerenciamento Global)
+
+Este portal é restrito a super administradores, servindo como hub central. Ele permite gerenciar todos os outros portais, tenants e configurações globais. Funcionalidades:
+- **Gestão Multi-Tenant**: Criação/edição/exclusão de tenants (empresas), incluindo planos, subscrições, pagamentos e migração para on-premise.
+- **Gestão de Usuários Globais**: Controle de todos os usuários (admins de tenants, agentes, clientes finais), com RBAC granular (ex.: bloquear acesso a portal específico).
+- **Configurações Globais**: Ativação de módulos por portal/tenant, configuração de tabelas (categorias, prioridades, status), integrações (APIs, SSO), temas e multilíngue.
+- **Auditoria e Monitoramento**: Logs completos de ações em todos os portais, relatórios agregados (ex.: uso por tenant), alertas de segurança.
+- **Gestão Financeira Central**: Configuração de planos, métodos de pagamento, relatórios de receita global, processamento de reembolsos/penalidades.
+- **Gestão de Conteúdos e Portais**: Edição de páginas do Portal SaaS (FAQs, planos), override de configurações em Portais das Empresas/Clientes, deployment de atualizações.
+- **Relatórios Avançados**: Dashboards multi-tenant, análises preditivas globais, exportações.
+- **Suporte a On-Premise**: Ferramentas para exportar configurações/instalações, gerenciamento remoto de instâncias on-premise.
+- **Segurança e Conformidade**: Configuração de criptografia, backups, conformidade; gerenciamento de OTP, SSO global.
+
+Todas as funcionalidades dos outros portais podem ser acessadas/simuladas via este portal para testes/auditoria.
+
+### 4.5 Outras Funcionalidades (Distribuídas por Portais)
+
+- **Gamificação**: Disponível no Portal das Empresas para agentes.
+- **Integrações**: Configuráveis no Portal das Empresas e Admin.
+- **Aprovações e Notificações**: Workflows multi-nível no Portal das Empresas; configurações personalizadas no Admin.
+
+## 5. Requisitos Não Funcionais
+
+### 5.1 Desempenho
+
+- Suportar 10.000 usuários simultâneos por portal, com resposta <1s.
+- Carregamento <2s.
+
+### 5.2 Segurança
+
+- Criptografia AES-256; isolamento por portal.
+- Audit logs gerenciados via Portal de Admin.
+
+### 5.3 Escalabilidade
+
+- Horizontal, com suporte multi-tenant e on-premise.
+
+### 5.4 Confiabilidade
+
+- Uptime >99.9%; backups gerenciados centralmente.
+
+### 5.5 Acessibilidade
+
+- WCAG 2.1 em todos os portais.
+
+## 6. Arquitetura Técnica
+
+- **Modularidade**: Microsserviços por portal/módulo, com API gateway para roteamento.
+- **Camadas**: Cliente (PWA), Aplicação (lógica por portal), Dados (isolados), IA e Integrações.
+- **Gerenciamento**: Portal de Admin como orquestrador.
+
+## 7. Sugestões de Funcionalidades Adicionais
+
+Integração com apps móveis para portais; análise de voz em tickets; módulos de compliance automatizados; expansão para e-commerce de add-ons no Portal SaaS.
