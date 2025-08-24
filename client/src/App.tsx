@@ -5,7 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PortalNavigation } from "@/components/portal-navigation";
-import { ProgressTracker } from "@/components/progress-tracker";
 import { LoginForm } from "@/components/auth/login-form";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { SaasPortal } from "@/pages/saas-portal";
@@ -15,13 +14,6 @@ import { AdminPortal } from "@/pages/admin-portal";
 import NotFound from "@/pages/not-found";
 import { authService } from "@/lib/auth";
 import type { PortalType } from "@/types/portal";
-
-const progressData = {
-  'saas': { status: 'Portal SaaS Ativo', percentage: 75 },
-  'organization': { status: 'Portal Empresas Ativo', percentage: 60 },
-  'customer': { status: 'Portal Clientes Ativo', percentage: 65 },
-  'admin': { status: 'Portal Admin Ativo', percentage: 70 }
-};
 
 function Router() {
   const [location] = useLocation();
@@ -64,10 +56,6 @@ function Router() {
       <PortalNavigation 
         currentPortal={currentPortal} 
         onPortalChange={handlePortalChange} 
-      />
-      <ProgressTracker 
-        currentPortal={currentPortal} 
-        progress={progressData[currentPortal]} 
       />
       
       <Switch>

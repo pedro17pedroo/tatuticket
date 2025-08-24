@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authService, type RegisterData } from "@/lib/auth";
 import { FAQSection } from "@/components/saas/faq-section";
 import { OnboardingWizard } from "@/components/saas/onboarding-wizard";
+import { TestimonialsSection } from "@/components/saas/testimonials-section";
 import type { PricingPlan } from "@/types/portal";
 
 const features = [
@@ -298,6 +299,9 @@ export function SaasPortal() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <TestimonialsSection />
+      
       {/* FAQ Section */}
       <FAQSection />
 
