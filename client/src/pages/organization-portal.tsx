@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DepartmentManagement } from "@/components/organization/department-management";
 import { TeamManagement } from "@/components/organization/team-management";
+import { SlaManagement } from "@/components/organization/sla-management";
+import { CustomerManagement } from "@/components/organization/customer-management";
+import { AgentManagement } from "@/components/organization/agent-management";
+import { AdvancedAnalytics } from "@/components/organization/advanced-analytics";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -146,31 +150,31 @@ export function OrganizationPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatsCard
                 title="Tickets Abertos"
-                value={isLoadingStats ? "..." : ticketStats?.openTickets || 0}
+                value={isLoadingStats ? "..." : (ticketStats as any)?.openTickets || 0}
                 icon="fa-exclamation-triangle"
                 iconColor="bg-red-100 text-red-600"
-                change={{ value: ticketStats?.openTickets ? `${ticketStats.openTickets} abertos` : "Nenhum", type: ticketStats?.openTickets ? "increase" : "decrease", label: "aguardando atendimento" }}
+                change={{ value: (ticketStats as any)?.openTickets ? `${(ticketStats as any).openTickets} abertos` : "Nenhum", type: (ticketStats as any)?.openTickets ? "increase" : "decrease", label: "aguardando atendimento" }}
               />
               <StatsCard
                 title="Resolvidos Hoje"
-                value={isLoadingStats ? "..." : ticketStats?.resolvedTickets || 0}
+                value={isLoadingStats ? "..." : (ticketStats as any)?.resolvedTickets || 0}
                 icon="fa-check-circle"
                 iconColor="bg-green-100 text-green-600"
-                change={{ value: ticketStats?.resolvedTickets ? `${ticketStats.resolvedTickets} resolvidos` : "Nenhum", type: ticketStats?.resolvedTickets ? "increase" : "decrease", label: "hoje" }}
+                change={{ value: (ticketStats as any)?.resolvedTickets ? `${(ticketStats as any).resolvedTickets} resolvidos` : "Nenhum", type: (ticketStats as any)?.resolvedTickets ? "increase" : "decrease", label: "hoje" }}
               />
               <StatsCard
                 title="Críticos"
-                value={isLoadingStats ? "..." : ticketStats?.criticalTickets || 0}
+                value={isLoadingStats ? "..." : (ticketStats as any)?.criticalTickets || 0}
                 icon="fa-exclamation"
                 iconColor="bg-orange-100 text-orange-600"
-                change={{ value: ticketStats?.criticalTickets ? `${ticketStats.criticalTickets} críticos` : "Nenhum", type: ticketStats?.criticalTickets === 0 ? "decrease" : "increase", label: "prioridade máxima" }}
+                change={{ value: (ticketStats as any)?.criticalTickets ? `${(ticketStats as any).criticalTickets} críticos` : "Nenhum", type: (ticketStats as any)?.criticalTickets === 0 ? "decrease" : "increase", label: "prioridade máxima" }}
               />
               <StatsCard
                 title="Total de Tickets"
-                value={isLoadingStats ? "..." : ticketStats?.totalTickets || 0}
+                value={isLoadingStats ? "..." : (ticketStats as any)?.totalTickets || 0}
                 icon="fa-ticket-alt"
                 iconColor="bg-blue-100 text-blue-600"
-                change={{ value: ticketStats?.totalTickets ? `${ticketStats.totalTickets} total` : "Nenhum", type: ticketStats?.totalTickets ? "increase" : "decrease", label: "na plataforma" }}
+                change={{ value: (ticketStats as any)?.totalTickets ? `${(ticketStats as any).totalTickets} total` : "Nenhum", type: (ticketStats as any)?.totalTickets ? "increase" : "decrease", label: "na plataforma" }}
               />
             </div>
 
@@ -326,8 +330,28 @@ export function OrganizationPortal() {
               </div>
             )}
             
+            {/* Customer Management */}
+            {activeNavItem === 'customers' && (
+              <CustomerManagement />
+            )}
+            
+            {/* Agent Management */}
+            {activeNavItem === 'agents' && (
+              <AgentManagement />
+            )}
+            
+            {/* SLA Management */}
+            {activeNavItem === 'slas' && (
+              <SlaManagement />
+            )}
+            
+            {/* Advanced Analytics */}
+            {activeNavItem === 'reports' && (
+              <AdvancedAnalytics />
+            )}
+            
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'structure'].includes(activeNavItem) && (
+            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
@@ -339,10 +363,9 @@ export function OrganizationPortal() {
           {/* Create Ticket Dialog */}
           <CreateTicketDialog
             isOpen={isCreateTicketOpen}
-            onClose={() => setIsCreateTicketOpen(false)}
-            onTicketCreated={() => {
+            onClose={() => {
               setIsCreateTicketOpen(false);
-              // Recarregar dados dos tickets e estatísticas
+              // Recarregar dados dos tickets e estatísticas após criação
               queryClient.invalidateQueries({ queryKey: ['/api/tickets', tenantId] });
               queryClient.invalidateQueries({ queryKey: ['/api/analytics/ticket-stats', tenantId] });
             }}

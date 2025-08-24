@@ -318,6 +318,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User routes
+  app.get("/api/users", async (req, res) => {
+    try {
+      const { tenantId, role } = req.query;
+      if (!tenantId) {
+        return res.status(400).json({ message: "tenantId is required" });
+      }
+      
+      // Get all users for the tenant
+      const users = await storage.getUsersByTenant(tenantId as string);
+      
+      // Filter by role if specified
+      let filteredUsers = users;
+      if (role) {
+        const roles = (role as string).split(',');
+        filteredUsers = users.filter(user => roles.includes(user.role));
+      }
+      
+      res.json(filteredUsers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      
+      // Don't return password in response
+      const { password, ...userResponse } = user;
+      
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: userData.tenantId,
+        action: "user_created",
+        resourceType: "user",
+        resourceId: user.id,
+        metadata: { username: user.username, role: user.role },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.status(201).json(userResponse);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't return password
+      const { password, ...userResponse } = user;
+      res.json(userResponse);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      
+      // If password is empty, remove it from updates
+      if (updates.password === "") {
+        delete updates.password;
+      }
+      
+      const user = await storage.updateUser(req.params.id, updates);
+      
+      // Don't return password
+      const { password, ...userResponse } = user;
+      
+      await storage.createAuditLog({
+        userId: req.params.id,
+        tenantId: user.tenantId,
+        action: "user_updated",
+        resourceType: "user", 
+        resourceId: user.id,
+        metadata: { updates: Object.keys(updates) },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+      
+      res.json(userResponse);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
   // Knowledge base routes
   app.get("/api/knowledge-articles", async (req, res) => {
     try {
