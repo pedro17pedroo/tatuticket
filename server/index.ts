@@ -9,16 +9,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Request logging middleware
-app.use(requestLogger);
-
 (async () => {
-  // Register all API routes
+  // Register all API routes with request logging only for API routes
   const server = registerRoutes(app);
-
-  // Error handling middleware (must be last)
-  app.use(notFoundHandler);
-  app.use(errorHandler);
 
   // Setup Vite in development or serve static files in production
   if (app.get("env") === "development") {
@@ -26,6 +19,9 @@ app.use(requestLogger);
   } else {
     serveStatic(app);
   }
+
+  // Error handling middleware (must be last, after Vite setup)
+  app.use(errorHandler);
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

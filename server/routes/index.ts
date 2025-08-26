@@ -1,5 +1,6 @@
 import { Express } from 'express';
 import { createServer, type Server } from 'http';
+import { requestLogger } from '../middlewares';
 import authRoutes from './auth.routes';
 import ticketRoutes from './ticket.routes';
 import userRoutes from './user.routes';
@@ -7,6 +8,9 @@ import tenantRoutes from './tenant.routes';
 import paymentRoutes from './payment.routes';
 
 export const registerRoutes = (app: Express): Server => {
+  // Apply request logging middleware only to API routes
+  app.use('/api', requestLogger);
+  
   // Register all routes with /api prefix
   app.use('/api/auth', authRoutes);
   app.use('/api/tickets', ticketRoutes);
