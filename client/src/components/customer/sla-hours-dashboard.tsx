@@ -1,221 +1,368 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Clock, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
 import { authService } from "@/lib/auth";
 
-interface SlaInfo {
+interface HoursBalance {
+  id: string;
+  customerId: string;
+  totalHours: number;
+  usedHours: number;
+  remainingHours: number;
+  expirationDate?: string;
+  isActive: boolean;
+}
+
+interface SLAStatus {
   ticketId: string;
   ticketNumber: string;
-  priority: string;
-  timeRemaining: number; // hours
-  totalTime: number; // hours
-  status: string;
+  subject: string;
+  slaName: string;
+  deadline: string;
+  remainingTime: number; // minutes
+  status: "on_time" | "warning" | "critical" | "breached";
+  progress: number; // percentage
 }
 
-interface HoursBankInfo {
-  available: number;
-  used: number;
-  total: number;
-  monthlyUsage: number;
-}
-
-export function SlaHoursDashboard() {
+export function SLAHoursDashboard() {
   const user = authService.getCurrentUser();
-  const tenantId = authService.getTenantId();
+  const customerId = user?.customerId;
 
-  // Fetch real SLA data for user's tickets
-  const { data: userTickets } = useQuery({
-    queryKey: ['/api/tickets', user?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/tickets?customerId=${user?.id}`);
-      if (!response.ok) throw new Error('Erro ao carregar tickets');
-      return response.json();
-    },
-    enabled: !!user?.id,
+  // Fetch hours balance
+  const { data: hoursBalance } = useQuery({
+    queryKey: ['/api/customers/hours-balance', customerId],
+    enabled: !!customerId,
   });
 
-  // Calculate SLA status from real tickets
-  const activeSlas: SlaInfo[] = userTickets ? userTickets
-    .filter((ticket: any) => ticket.status === 'open' || ticket.status === 'in_progress')
-    .map((ticket: any) => {
-      const createdAt = new Date(ticket.createdAt);
-      const now = new Date();
-      const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-      
-      // Default SLA times by priority
-      const slaTimeMap: Record<string, number> = {
-        critical: 4,
-        high: 8, 
-        medium: 24,
-        low: 72
-      };
-      const slaHours = slaTimeMap[ticket.priority] || 24;
-      
-      const timeRemaining = Math.max(0, slaHours - hoursElapsed);
-      
-      return {
-        ticketId: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-        priority: ticket.priority,
-        timeRemaining,
-        totalTime: slaHours,
-        status: ticket.status
-      };
-    }) : [];
+  // Fetch active SLA status
+  const { data: slaStatus = [] } = useQuery({
+    queryKey: ['/api/customers/sla-status', customerId],
+    enabled: !!customerId,
+  });
 
-  // Mock hours bank data - in real implementation, fetch from customer API
-  const hoursBankInfo: HoursBankInfo = {
-    available: 42.5,
-    used: 7.5,
-    total: 50,
-    monthlyUsage: 7.5
+  // Fetch hours usage history
+  const { data: hoursUsage = [] } = useQuery({
+    queryKey: ['/api/customers/hours-usage', customerId],
+    enabled: !!customerId,
+  });
+
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) return `${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}min`;
   };
 
-  const getSlaUrgency = (timeRemaining: number, totalTime: number) => {
-    const percentage = (timeRemaining / totalTime) * 100;
-    if (percentage <= 10) return { level: 'critical', color: 'text-red-600', bgColor: 'bg-red-100' };
-    if (percentage <= 25) return { level: 'warning', color: 'text-yellow-600', bgColor: 'bg-yellow-100' };
-    return { level: 'normal', color: 'text-green-600', bgColor: 'bg-green-100' };
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const formatTimeRemaining = (hours: number) => {
-    if (hours < 1) {
-      const minutes = Math.floor(hours * 60);
-      return `${minutes}min`;
+  const getSLAStatusColor = (status: string) => {
+    switch (status) {
+      case 'on_time': return 'bg-green-100 text-green-800';
+      case 'warning': return 'bg-yellow-100 text-yellow-800';
+      case 'critical': return 'bg-orange-100 text-orange-800';
+      case 'breached': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    return `${Math.floor(hours)}h ${Math.floor((hours % 1) * 60)}min`;
+  };
+
+  const getSLAStatusLabel = (status: string) => {
+    switch (status) {
+      case 'on_time': return 'No Prazo';
+      case 'warning': return 'Atenção';
+      case 'critical': return 'Crítico';
+      case 'breached': return 'Violado';
+      default: return status;
+    }
+  };
+
+  const getSLAProgressColor = (status: string) => {
+    switch (status) {
+      case 'on_time': return 'bg-green-500';
+      case 'warning': return 'bg-yellow-500';
+      case 'critical': return 'bg-orange-500';
+      case 'breached': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const calculateUsagePercentage = (balance: HoursBalance) => {
+    if (!balance || balance.totalHours === 0) return 0;
+    return (balance.usedHours / balance.totalHours) * 100;
+  };
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'text-red-600';
+    if (percentage >= 75) return 'text-orange-600';
+    if (percentage >= 50) return 'text-yellow-600';
+    return 'text-green-600';
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-6">
-      {/* SLA Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-primary" />
-            <span>Status dos SLAs</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {activeSlas.length > 0 ? (
-            activeSlas.map((sla) => {
-              const urgency = getSlaUrgency(sla.timeRemaining, sla.totalTime);
-              const percentage = (sla.timeRemaining / sla.totalTime) * 100;
+    <div className="space-y-6">
+      {/* Hours Balance Overview */}
+      {hoursBalance && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Horas Totais</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {hoursBalance.totalHours}h
+                  </p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <i className="fas fa-clock text-blue-600"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Horas Utilizadas</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {hoursBalance.usedHours}h
+                  </p>
+                </div>
+                <div className="p-3 bg-orange-100 rounded-full">
+                  <i className="fas fa-hourglass-half text-orange-600"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Horas Restantes</p>
+                  <p className={`text-2xl font-bold ${getUsageColor(calculateUsagePercentage(hoursBalance))}`}>
+                    {hoursBalance.remainingHours}h
+                  </p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <i className="fas fa-battery-three-quarters text-green-600"></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <Badge className={hoursBalance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                    {hoursBalance.isActive ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                  {hoursBalance.expirationDate && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Vence em {formatDate(hoursBalance.expirationDate)}
+                    </p>
+                  )}
+                </div>
+                <div className={`p-3 rounded-full ${hoursBalance.isActive ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <i className={`fas ${hoursBalance.isActive ? 'fa-check-circle' : 'fa-times-circle'} ${hoursBalance.isActive ? 'text-green-600' : 'text-red-600'}`}></i>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Usage Progress */}
+      {hoursBalance && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <i className="fas fa-chart-line mr-2"></i>
+              Consumo da Bolsa de Horas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">
+                  Progresso do Uso
+                </span>
+                <span className={`text-sm font-bold ${getUsageColor(calculateUsagePercentage(hoursBalance))}`}>
+                  {calculateUsagePercentage(hoursBalance).toFixed(1)}%
+                </span>
+              </div>
+              <Progress 
+                value={calculateUsagePercentage(hoursBalance)} 
+                className="h-3"
+                data-testid="hours-progress"
+              />
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>{hoursBalance.usedHours}h utilizadas</span>
+                <span>{hoursBalance.totalHours}h disponíveis</span>
+              </div>
               
-              return (
-                <div key={sla.ticketId} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-sm">{sla.ticketNumber}</span>
-                      <Badge 
-                        variant={sla.priority === 'critical' ? 'destructive' : 'outline'}
-                        className="text-xs"
-                      >
-                        {sla.priority}
-                      </Badge>
-                    </div>
-                    <span className={`text-sm font-medium ${urgency.color}`}>
-                      {formatTimeRemaining(sla.timeRemaining)} restantes
+              {calculateUsagePercentage(hoursBalance) >= 75 && (
+                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-center">
+                    <i className="fas fa-exclamation-triangle text-orange-600 mr-2"></i>
+                    <span className="text-sm font-medium text-orange-800">
+                      Atenção: Você está próximo do limite da sua bolsa de horas
                     </span>
                   </div>
-                  <Progress 
-                    value={percentage} 
-                    className={`h-2 ${urgency.level === 'critical' ? 'bg-red-100' : urgency.level === 'warning' ? 'bg-yellow-100' : 'bg-green-100'}`}
-                  />
-                  {urgency.level === 'critical' && (
-                    <div className="flex items-center space-x-1 text-xs text-red-600">
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>SLA em risco!</span>
+                  {calculateUsagePercentage(hoursBalance) >= 90 && (
+                    <div className="mt-2">
+                      <Button size="sm" data-testid="button-recharge-hours">
+                        <i className="fas fa-plus mr-2"></i>
+                        Recarregar Bolsa
+                      </Button>
                     </div>
                   )}
                 </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-6">
-              <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhum ticket ativo no momento</p>
-              <p className="text-sm text-gray-400">Seus SLAs aparecerão aqui quando houver tickets em andamento</p>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Hours Bank */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <span>Bolsa de Horas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Current Balance */}
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Saldo Disponível</span>
-            <span className="text-2xl font-bold text-primary" data-testid="text-available-hours">
-              {hoursBankInfo.available}h
-            </span>
-          </div>
-          
-          {/* Usage This Month */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Usado este Mês</span>
-              <span className="text-lg font-semibold text-gray-900" data-testid="text-used-hours">
-                {hoursBankInfo.monthlyUsage}h
-              </span>
+      {/* Active SLA Timers */}
+      {slaStatus.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <i className="fas fa-stopwatch mr-2"></i>
+              SLAs Ativos ({slaStatus.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {slaStatus.map((sla: SLAStatus) => (
+                <Card key={sla.ticketId} className="bg-gray-50" data-testid={`sla-timer-${sla.ticketNumber}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">
+                          Ticket #{sla.ticketNumber}
+                        </h4>
+                        <p className="text-sm text-gray-600">{sla.subject}</p>
+                        <p className="text-xs text-gray-500 mt-1">SLA: {sla.slaName}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge className={getSLAStatusColor(sla.status)}>
+                          {getSLAStatusLabel(sla.status)}
+                        </Badge>
+                        <p className="text-sm font-medium text-gray-900 mt-1">
+                          {formatTime(sla.remainingTime)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          até {formatDate(sla.deadline)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Progresso do SLA</span>
+                        <span className="font-medium">{sla.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${getSLAProgressColor(sla.status)}`}
+                          style={{ width: `${sla.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            <Progress 
-              value={(hoursBankInfo.monthlyUsage / hoursBankInfo.total) * 100} 
-              className="h-3" 
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>0h</span>
-              <span>{hoursBankInfo.total}h (limite mensal)</span>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Stats */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Total Utilizado:</span>
-              <span className="font-medium">{hoursBankInfo.used}h</span>
+      {/* Recent Hours Usage */}
+      {hoursUsage.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <i className="fas fa-history mr-2"></i>
+              Histórico de Uso Recente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {hoursUsage.slice(0, 10).map((usage: any, index: number) => (
+                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <i className="fas fa-ticket-alt text-blue-600 text-xs"></i>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Ticket #{usage.ticketNumber}</p>
+                      <p className="text-sm text-gray-600">{usage.description}</p>
+                      <p className="text-xs text-gray-500">{formatDate(usage.date)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-gray-900">{usage.hoursUsed}h</p>
+                    <p className="text-sm text-gray-600">R$ {usage.cost}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Economia estimada:</span>
-              <span className="font-medium text-green-600">
-                R$ {((hoursBankInfo.total - hoursBankInfo.used) * 150).toLocaleString('pt-BR')}
-              </span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-2">
-            <Button className="w-full" data-testid="button-reload-hours">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Recarregar Bolsa
-            </Button>
-            <Button variant="outline" className="w-full" data-testid="button-view-history">
-              Ver Histórico de Uso
-            </Button>
-          </div>
-
-          {/* Low balance warning */}
-          {hoursBankInfo.available < 10 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-800">Saldo Baixo</span>
+            
+            {hoursUsage.length > 10 && (
+              <div className="mt-4 text-center">
+                <Button variant="outline" size="sm" data-testid="button-view-all-usage">
+                  Ver Todo Histórico
+                </Button>
               </div>
-              <p className="text-xs text-yellow-700 mt-1">
-                Considere recarregar sua bolsa para evitar interrupções no suporte
-              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Help Section */}
+      <Card className="bg-blue-50">
+        <CardContent className="p-6">
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-blue-100 rounded-full">
+              <i className="fas fa-question-circle text-blue-600"></i>
             </div>
-          )}
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 mb-2">
+                Como Funciona a Bolsa de Horas?
+              </h3>
+              <div className="text-sm text-blue-700 space-y-2">
+                <p>
+                  • <strong>SLA-Based:</strong> Custos fixos baseados em tempo de resposta
+                </p>
+                <p>
+                  • <strong>Bolsa de Horas:</strong> Pagamento por uso real de tempo
+                </p>
+                <p>
+                  • <strong>Modelo Híbrido:</strong> Combinação de base fixa + consumo adicional
+                </p>
+              </div>
+              <div className="mt-4">
+                <Button variant="outline" size="sm" data-testid="button-learn-more">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  Saiba Mais
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DepartmentManagement } from "@/components/organization/department-management";
 import { TeamManagement } from "@/components/organization/team-management";
-import { SlaManagement } from "@/components/organization/sla-management";
+import { SLAManagement } from "@/components/organization/sla-management";
 import { CustomerManagement } from "@/components/organization/customer-management";
 import { AgentManagement } from "@/components/organization/agent-management";
 import { AdvancedAnalytics } from "@/components/organization/advanced-analytics";
@@ -304,7 +304,7 @@ export function OrganizationPortal() {
             )}
 
             {activeNavItem === 'tickets' && (
-              <TicketManagement tenantId={tenantId} userRole={user.role} />
+              <TicketManagement />
             )}
             
             {/* Structure Management */}
@@ -350,7 +350,7 @@ export function OrganizationPortal() {
             
             {/* SLA Management */}
             {activeNavItem === 'slas' && (
-              <SlaManagement />
+              <SLAManagement />
             )}
             
             {/* Advanced Analytics */}

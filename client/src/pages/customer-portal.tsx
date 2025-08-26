@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { KnowledgeBaseSearch } from "@/components/customer/knowledge-base-search";
 import { TicketDetailsView } from "@/components/customer/ticket-details-view";
-import { SlaHoursDashboard } from "@/components/customer/sla-hours-dashboard";
+import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
 
@@ -213,7 +213,7 @@ export function CustomerPortal() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <SlaHoursDashboard />
+          <SLAHoursDashboard />
           <div className="mt-6 text-center">
             <Button onClick={handleBackToPortal} data-testid="button-back-to-portal">
               Voltar ao Portal
@@ -273,7 +273,7 @@ export function CustomerPortal() {
 
         {/* SLA Status and Hours Bank */}
         <div className="mb-8">
-          <SlaHoursDashboard />
+          <SLAHoursDashboard />
         </div>
 
         {/* Recent Tickets */}
