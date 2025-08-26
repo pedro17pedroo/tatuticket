@@ -15,6 +15,9 @@ import { AdvancedAnalytics } from "@/components/organization/advanced-analytics"
 import { KnowledgeManagement } from "@/components/organization/knowledge-management";
 import { AIInsights } from "@/components/organization/ai-insights";
 import { TicketManagement } from "@/components/organization/ticket-management";
+import { GamificationDashboard } from "@/components/organization/gamification-dashboard";
+import { ReportExport } from "@/components/organization/report-export";
+import { WebhookManager } from "@/components/organization/webhook-manager";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -31,6 +34,9 @@ const navigationItems: NavigationItem[] = [
   { id: 'reports', label: 'Relatórios', icon: 'fa-chart-bar', href: '#' },
   { id: 'knowledge', label: 'Base de Conhecimento', icon: 'fa-book', href: '#' },
   { id: 'ai-insights', label: 'Insights de IA', icon: 'fa-brain', href: '#' },
+  { id: 'gamification', label: 'Gamificação', icon: 'fa-trophy', href: '#' },
+  { id: 'export', label: 'Exportar', icon: 'fa-download', href: '#' },
+  { id: 'integrations', label: 'Integrações', icon: 'fa-plug', href: '#' },
   { id: 'settings', label: 'Configurações', icon: 'fa-cog', href: '#' },
 ];
 
@@ -368,8 +374,23 @@ export function OrganizationPortal() {
               <AIInsights />
             )}
             
+            {/* Gamification Dashboard */}
+            {activeNavItem === 'gamification' && (
+              <GamificationDashboard />
+            )}
+            
+            {/* Report Export */}
+            {activeNavItem === 'export' && (
+              <ReportExport />
+            )}
+            
+            {/* Webhook Manager */}
+            {activeNavItem === 'integrations' && (
+              <WebhookManager />
+            )}
+            
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge', 'ai-insights'].includes(activeNavItem) && (
+            {!['dashboard', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge', 'ai-insights', 'gamification', 'export', 'integrations'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
