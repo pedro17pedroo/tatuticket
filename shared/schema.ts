@@ -114,11 +114,42 @@ export const knowledgeArticles = pgTable("knowledge_articles", {
   slug: text("slug").notNull(),
   tenantId: varchar("tenant_id").notNull(),
   authorId: varchar("author_id").notNull(),
-  status: text("status").notNull().default("draft"), // draft, published, archived
+  status: text("status").notNull().default("draft"), // draft, published, archived, pending_approval
   isPublic: boolean("is_public").default(false),
   viewCount: integer("view_count").default(0),
+  version: integer("version").default(1),
+  parentId: varchar("parent_id"), // For revisions
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Article versions for history tracking
+export const articleVersions = pgTable("article_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").notNull(),
+  version: integer("version").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  authorId: varchar("author_id").notNull(),
+  changeNote: text("change_note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Approval workflows
+export const approvalWorkflows = pgTable("approval_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resourceType: text("resource_type").notNull(), // knowledge_article, etc
+  resourceId: varchar("resource_id").notNull(),
+  tenantId: varchar("tenant_id").notNull(),
+  requesterId: varchar("requester_id").notNull(),
+  approverId: varchar("approver_id"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 // Audit logs
@@ -233,6 +264,19 @@ export const insertKnowledgeArticleSchema = createInsertSchema(knowledgeArticles
   id: true,
   createdAt: true,
   updatedAt: true,
+  publishedAt: true,
+  approvedAt: true,
+});
+
+export const insertArticleVersionSchema = createInsertSchema(articleVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApprovalWorkflowSchema = createInsertSchema(approvalWorkflows).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
 });
 
 export const insertSlaConfigSchema = createInsertSchema(slaConfigs).omit({
@@ -253,6 +297,8 @@ export type Team = typeof teams.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type Customer = typeof customers.$inferSelect;
 export type KnowledgeArticle = typeof knowledgeArticles.$inferSelect;
+export type ArticleVersion = typeof articleVersions.$inferSelect;
+export type ApprovalWorkflow = typeof approvalWorkflows.$inferSelect;
 export type SlaConfig = typeof slaConfigs.$inferSelect;
 export type OtpCode = typeof otpCodes.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
@@ -264,6 +310,8 @@ export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertTicket = z.infer<typeof insertTicketSchema>;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema>;
+export type InsertArticleVersion = z.infer<typeof insertArticleVersionSchema>;
+export type InsertApprovalWorkflow = z.infer<typeof insertApprovalWorkflowSchema>;
 export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
 

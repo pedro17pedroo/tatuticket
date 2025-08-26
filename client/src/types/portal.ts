@@ -164,3 +164,12 @@ export interface SlaConfig {
   isActive: boolean;
   createdAt: string;
 }
+
+export interface GlobalStats {
+  totalTenants: number;
+  totalUsers: number;
+  totalTickets: number;
+  activeToday: number;
+  mrr: number;
+  uptime: number;
+}

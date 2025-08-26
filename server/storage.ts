@@ -1,8 +1,9 @@
 import { 
-  users, tenants, tickets, departments, teams, customers, knowledgeArticles, slaConfigs, auditLogs, otpCodes,
+  users, tenants, tickets, departments, teams, customers, knowledgeArticles, articleVersions, approvalWorkflows, slaConfigs, auditLogs, otpCodes,
   type User, type InsertUser, type Tenant, type InsertTenant, type Ticket, type InsertTicket,
   type Department, type InsertDepartment, type Team, type InsertTeam, type Customer, type InsertCustomer,
-  type KnowledgeArticle, type InsertKnowledgeArticle, type SlaConfig, type InsertSlaConfig,
+  type KnowledgeArticle, type InsertKnowledgeArticle, type ArticleVersion, type InsertArticleVersion,
+  type ApprovalWorkflow, type InsertApprovalWorkflow, type SlaConfig, type InsertSlaConfig,
   type AuditLog, type OtpCode, type InsertOtpCode
 } from "@shared/schema";
 import { db } from "./db";
@@ -22,6 +23,7 @@ export interface IStorage {
   getTenantBySlug(slug: string): Promise<Tenant | undefined>;
   createTenant(tenant: InsertTenant): Promise<Tenant>;
   updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant>;
+  deleteTenant(id: string): Promise<void>;
   getAllTenants(): Promise<Tenant[]>;
   getTenantsByStripeSubscription(subscriptionId: string): Promise<Tenant[]>;
 
@@ -66,6 +68,16 @@ export interface IStorage {
   // Audit Logs
   createAuditLog(log: Omit<AuditLog, 'id' | 'createdAt'>): Promise<AuditLog>;
   getAuditLogsByTenant(tenantId: string): Promise<AuditLog[]>;
+  getAuditLogs(options?: { tenantId?: string; userId?: string; action?: string; limit?: number }): Promise<AuditLog[]>;
+
+  // Article Versions
+  createArticleVersion(version: InsertArticleVersion): Promise<ArticleVersion>;
+  getArticleVersions(articleId: string): Promise<ArticleVersion[]>;
+
+  // Approval Workflows
+  createApprovalWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow>;
+  getApprovalWorkflows(tenantId: string, status?: string): Promise<ApprovalWorkflow[]>;
+  updateApprovalWorkflow(id: string, updates: Partial<ApprovalWorkflow>): Promise<ApprovalWorkflow | null>;
 
   // OTP Codes
   createOtpCode(otp: InsertOtpCode): Promise<OtpCode>;
@@ -144,6 +156,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenants.id, id))
       .returning();
     return tenant;
+  }
+
+  async deleteTenant(id: string): Promise<void> {
+    await db.delete(tenants).where(eq(tenants.id, id));
   }
 
   async getAllTenants(): Promise<Tenant[]> {
@@ -318,6 +334,63 @@ export class DatabaseStorage implements IStorage {
       .where(eq(auditLogs.tenantId, tenantId))
       .orderBy(desc(auditLogs.createdAt))
       .limit(100);
+  }
+
+  async getAuditLogs(options: { tenantId?: string; userId?: string; action?: string; limit?: number } = {}): Promise<AuditLog[]> {
+    let query = db.select().from(auditLogs);
+    
+    if (options.tenantId) {
+      query = query.where(eq(auditLogs.tenantId, options.tenantId));
+    }
+    if (options.userId) {
+      query = query.where(eq(auditLogs.userId, options.userId));
+    }
+    if (options.action) {
+      query = query.where(eq(auditLogs.action, options.action));
+    }
+    
+    if (options.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    return query.orderBy(desc(auditLogs.createdAt));
+  }
+
+  // Article Versions
+  async createArticleVersion(version: InsertArticleVersion): Promise<ArticleVersion> {
+    const [created] = await db.insert(articleVersions).values(version).returning();
+    return created;
+  }
+
+  async getArticleVersions(articleId: string): Promise<ArticleVersion[]> {
+    return await db.select().from(articleVersions)
+      .where(eq(articleVersions.articleId, articleId))
+      .orderBy(desc(articleVersions.version));
+  }
+
+  // Approval Workflows
+  async createApprovalWorkflow(workflow: InsertApprovalWorkflow): Promise<ApprovalWorkflow> {
+    const [created] = await db.insert(approvalWorkflows).values(workflow).returning();
+    return created;
+  }
+
+  async getApprovalWorkflows(tenantId: string, status?: string): Promise<ApprovalWorkflow[]> {
+    let query = db.select().from(approvalWorkflows)
+      .where(eq(approvalWorkflows.tenantId, tenantId));
+    
+    if (status) {
+      query = query.where(eq(approvalWorkflows.status, status));
+    }
+    
+    return query.orderBy(desc(approvalWorkflows.createdAt));
+  }
+
+  async updateApprovalWorkflow(id: string, updates: Partial<ApprovalWorkflow>): Promise<ApprovalWorkflow | null> {
+    const [updated] = await db.update(approvalWorkflows)
+      .set({ ...updates, resolvedAt: updates.status !== 'pending' ? new Date() : undefined })
+      .where(eq(approvalWorkflows.id, id))
+      .returning();
+    return updated || null;
   }
 
   async getTicketStats(tenantId: string): Promise<{

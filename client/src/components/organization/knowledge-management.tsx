@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichEditor } from "@/components/ui/rich-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { BookOpen, Plus, Edit, Trash2, Eye, Globe, Lock, Search, FileText, Users, TrendingUp } from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, Eye, Globe, Lock, Search, FileText, Users, TrendingUp, Clock, CheckCircle, XCircle, History } from "lucide-react";
 import { authService } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
 import type { KnowledgeArticle } from "@shared/schema";
@@ -23,6 +23,16 @@ interface ArticleFormData {
   slug: string;
   status: string;
   isPublic: boolean;
+  changeNote?: string;
+}
+
+interface ApprovalWorkflow {
+  id: string;
+  resourceId: string;
+  requesterUsername: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  comment?: string;
 }
 
 interface KnowledgeStats {
@@ -38,13 +48,17 @@ export function KnowledgeManagement() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KnowledgeArticle | null>(null);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ArticleFormData>({
     title: "",
     content: "",
     slug: "",
     status: "draft",
-    isPublic: false
+    isPublic: false,
+    changeNote: ""
   });
 
   const tenantId = authService.getTenantId();
@@ -481,12 +495,10 @@ export function KnowledgeManagement() {
 
           <div>
             <Label htmlFor="content">Conteúdo *</Label>
-            <Textarea
-              id="content"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Conteúdo do artigo"
-              rows={12}
+            <RichEditor
+              content={formData.content}
+              onChange={(content) => setFormData({ ...formData, content })}
+              className="mt-2"
             />
           </div>
 
@@ -499,6 +511,7 @@ export function KnowledgeManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Rascunho</SelectItem>
+                  <SelectItem value="pending_approval">Aguardando Aprovação</SelectItem>
                   <SelectItem value="published">Publicado</SelectItem>
                   <SelectItem value="archived">Arquivado</SelectItem>
                 </SelectContent>
