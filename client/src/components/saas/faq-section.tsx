@@ -1,128 +1,61 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 
-interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  category: "product" | "pricing" | "technical" | "support";
-}
-
-const faqs: FAQ[] = [
-  // Product FAQs
+const faqData = [
   {
-    id: "1",
     question: "O que é o TatuTicket?",
-    answer: "O TatuTicket é uma plataforma completa de gestão de tickets multi-tenant, projetada para revolucionar o suporte ao cliente. Oferece 4 portais distintos: SaaS (prospecção), Organizacional (gestão interna), Clientes (autoatendimento) e Admin (controle global).",
-    category: "product"
+    answer: "TatuTicket é uma plataforma completa de gestão de tickets multi-tenant, projetada para revolucionar o suporte ao cliente. Com IA avançada, SLAs flexíveis e analytics poderosas, oferecemos uma solução modular que se adapta às necessidades de qualquer empresa."
   },
   {
-    id: "2", 
-    question: "Quais são os principais diferenciais do TatuTicket?",
-    answer: "IA avançada para automação, SLAs flexíveis com bolsa de horas, analytics preditivas, isolamento multi-tenant, PWA nativa, conformidade LGPD/GDPR, e opção on-premise para empresas que preferem evitar soluções em nuvem.",
-    category: "product"
+    question: "Quais são os planos disponíveis?",
+    answer: "Oferecemos 3 planos: Freemium (gratuito até 50 tickets/mês), Pro (R$ 29/agente/mês) e Enterprise (personalizado). Cada plano inclui funcionalidades específicas para diferentes necessidades empresariais."
   },
   {
-    id: "3",
-    question: "O sistema funciona offline?",
-    answer: "Sim! O TatuTicket é uma Progressive Web App (PWA) que funciona offline, pode ser instalada como app nativo e envia push notifications. Perfeito para equipes que trabalham em campo.",
-    category: "technical"
-  },
-  
-  // Pricing FAQs
-  {
-    id: "4",
-    question: "Quanto custa o TatuTicket?",
-    answer: "Temos 3 planos: Freemium (gratuito para até 3 agentes e 50 tickets/mês), Pro (R$ 29/agente/mês com recursos ilimitados), e Enterprise (personalizado com opção on-premise).",
-    category: "pricing"
+    question: "O TatuTicket funciona offline?",
+    answer: "Sim! Como Progressive Web App (PWA), o TatuTicket funciona offline e pode ser instalado no seu dispositivo como um app nativo, garantindo produtividade mesmo sem conexão com internet."
   },
   {
-    id: "5",
-    question: "Posso testar antes de comprar?",
-    answer: "Claro! Oferecemos 14 dias de teste gratuito do plano Pro, sem necessidade de cartão de crédito. Você também pode usar o plano Freemium permanentemente.",
-    category: "pricing"
+    question: "Como funciona a IA do TatuTicket?",
+    answer: "Nossa IA analisa tickets automaticamente, categoriza por prioridade, sugere respostas, detecta sentimento do cliente e oferece insights preditivos para otimizar o atendimento e antecipar problemas."
   },
   {
-    id: "6",
-    question: "Como funciona a cobrança por agente?",
-    answer: "No plano Pro, você paga apenas pelos agentes ativos (que fazem login mensalmente). Clientes finais não são contabilizados. No Enterprise, temos modelos flexíveis incluindo cobrança por volume de tickets.",
-    category: "pricing"
-  },
-  
-  // Technical FAQs  
-  {
-    id: "7",
-    question: "O TatuTicket tem APIs?",
-    answer: "Sim! Oferecemos APIs RESTful completas, webhooks configuráveis e integrações nativas com mais de 100 ferramentas populares (Slack, Jira, Zapier, etc.).",
-    category: "technical"
-  },
-  {
-    id: "8",
-    question: "É possível personalizar a interface?",
-    answer: "Totalmente! Suportamos themes personalizados, white-label completo no Enterprise, e cada tenant pode configurar sua própria identidade visual.",
-    category: "technical"
-  },
-  {
-    id: "9",
-    question: "Como funciona a IA do sistema?",
-    answer: "Nossa IA analisa tickets automaticamente para categorização, priorização, roteamento inteligente, análise de sentimento, sugestões de respostas e insights preditivos para gestores.",
-    category: "technical"
-  },
-  
-  // Support FAQs
-  {
-    id: "10",
-    question: "Que tipo de suporte vocês oferecem?",
-    answer: "Freemium: email. Pro: email + chat. Enterprise: suporte 24/7 por telefone, email, chat e manager dedicado. Todos os planos incluem documentação completa e tutoriais.",
-    category: "support"
-  },
-  {
-    id: "11",
-    question: "Vocês fazem migração de dados?",
-    answer: "Sim! No plano Enterprise incluímos migração completa de dados de outros sistemas. No Pro, oferecemos assistência para importação via CSV/Excel.",
-    category: "support"
-  },
-  {
-    id: "12",
     question: "O sistema é seguro?",
-    answer: "Extremamente! Usamos criptografia AES-256, isolamento completo multi-tenant, backups automáticos, conformidade LGPD/GDPR e auditoria completa de todas as ações.",
-    category: "support"
+    answer: "Absolutamente. Utilizamos criptografia AES-256, isolamento multi-tenant completo e somos totalmente compatíveis com LGPD e GDPR. Seus dados estão protegidos com os mais altos padrões de segurança."
+  },
+  {
+    question: "Posso integrar com outros sistemas?",
+    answer: "Sim! Oferecemos APIs RESTful completas, webhooks e integrações nativas com mais de 100 ferramentas populares como Slack, Jira, CRM e sistemas ERP."
+  },
+  {
+    question: "Existe versão on-premise?",
+    answer: "Sim! O plano Enterprise inclui a opção de instalação on-premise para empresas que preferem manter dados em sua própria infraestrutura por questões de conformidade ou controle."
+  },
+  {
+    question: "Como funcionam os SLAs?",
+    answer: "Oferecemos modelos flexíveis: SLA tradicional (custos fixos), Bolsa de Horas (pagamento por uso) e Híbrido (combinação de ambos). Monitoramento em tempo real com alertas automáticos."
   }
 ];
 
-const categoryLabels = {
-  product: "Produto",
-  pricing: "Preços",
-  technical: "Técnico", 
-  support: "Suporte"
-};
-
-const categoryIcons = {
-  product: "fa-cube",
-  pricing: "fa-dollar-sign",
-  technical: "fa-cogs",
-  support: "fa-life-ring"
-};
-
 export function FAQSection() {
-  const [openItems, setOpenItems] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [openItems, setOpenItems] = useState<number[]>([]);
 
-  const toggleItem = (id: string) => {
+  const filteredFAQ = faqData.filter(
+    (item) =>
+      item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.answer.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const toggleItem = (index: number) => {
     setOpenItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
     );
   };
-
-  const filteredFAQs = selectedCategory === "all" 
-    ? faqs 
-    : faqs.filter(faq => faq.category === selectedCategory);
-
-  const categories = Object.keys(categoryLabels) as Array<keyof typeof categoryLabels>;
 
   return (
     <section className="py-20 bg-gray-50">
@@ -131,84 +64,42 @@ export function FAQSection() {
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
             Perguntas Frequentes
           </h2>
-          <p className="text-xl text-gray-600">
-            Encontre respostas para as dúvidas mais comuns sobre o TatuTicket
+          <p className="text-xl text-gray-600 mb-8">
+            Encontre respostas para as dúvidas mais comuns
           </p>
+          <div className="max-w-md mx-auto">
+            <Input
+              type="search"
+              placeholder="Buscar na FAQ..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+              data-testid="input-faq-search"
+            />
+          </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
-          <button
-            onClick={() => setSelectedCategory("all")}
-            className={cn(
-              "px-6 py-3 rounded-full font-medium transition-colors",
-              selectedCategory === "all"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            )}
-            data-testid="filter-all"
-          >
-            <i className="fas fa-th mr-2"></i>
-            Todas
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={cn(
-                "px-6 py-3 rounded-full font-medium transition-colors",
-                selectedCategory === category
-                  ? "bg-primary text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              )}
-              data-testid={`filter-${category}`}
-            >
-              <i className={`fas ${categoryIcons[category]} mr-2`}></i>
-              {categoryLabels[category]}
-            </button>
-          ))}
-        </div>
-
-        {/* FAQ Items */}
         <div className="space-y-4">
-          {filteredFAQs.map((faq) => (
-            <Card key={faq.id} className="overflow-hidden">
-              <Collapsible open={openItems.includes(faq.id)}>
-                <CollapsibleTrigger 
-                  onClick={() => toggleItem(faq.id)}
-                  className="w-full"
-                  data-testid={`faq-${faq.id}`}
-                >
-                  <CardContent className="p-6 hover:bg-gray-50 transition-colors">
+          {filteredFAQ.map((item, index) => (
+            <Card key={index} className="shadow-sm">
+              <Collapsible open={openItems.includes(index)}>
+                <CollapsibleTrigger asChild>
+                  <CardHeader 
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => toggleItem(index)}
+                    data-testid={`faq-question-${index}`}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center",
-                          faq.category === "product" && "bg-blue-100 text-blue-600",
-                          faq.category === "pricing" && "bg-green-100 text-green-600", 
-                          faq.category === "technical" && "bg-purple-100 text-purple-600",
-                          faq.category === "support" && "bg-orange-100 text-orange-600"
-                        )}>
-                          <i className={`fas ${categoryIcons[faq.category]}`}></i>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 text-left">
-                          {faq.question}
-                        </h3>
-                      </div>
-                      <i className={cn(
-                        "fas fa-chevron-down transition-transform",
-                        openItems.includes(faq.id) && "transform rotate-180"
-                      )}></i>
+                      <CardTitle className="text-lg font-semibold text-left">
+                        {item.question}
+                      </CardTitle>
+                      <i className={`fas ${openItems.includes(index) ? 'fa-chevron-up' : 'fa-chevron-down'} text-gray-400`}></i>
                     </div>
-                  </CardContent>
+                  </CardHeader>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent className="px-6 pb-6 pt-0">
-                    <div className="pl-14">
-                      <p className="text-gray-600 leading-relaxed">
-                        {faq.answer}
-                      </p>
-                    </div>
+                  <CardContent className="pt-0">
+                    <p className="text-gray-600 leading-relaxed">{item.answer}</p>
                   </CardContent>
                 </CollapsibleContent>
               </Collapsible>
@@ -216,35 +107,26 @@ export function FAQSection() {
           ))}
         </div>
 
-        {/* Contact Support CTA */}
+        {filteredFAQ.length === 0 && (
+          <div className="text-center py-12">
+            <i className="fas fa-search text-4xl text-gray-300 mb-4"></i>
+            <p className="text-lg font-medium text-gray-600 mb-2">
+              Nenhuma pergunta encontrada
+            </p>
+            <p className="text-gray-500">
+              Tente usar outros termos de busca
+            </p>
+          </div>
+        )}
+
         <div className="text-center mt-12">
-          <Card className="bg-primary text-white">
-            <CardContent className="p-8">
-              <i className="fas fa-headset text-3xl mb-4"></i>
-              <h3 className="text-xl font-semibold mb-2">
-                Não encontrou sua resposta?
-              </h3>
-              <p className="text-blue-100 mb-6">
-                Nossa equipe de suporte está pronta para ajudar você
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button 
-                  className="bg-white text-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-                  data-testid="button-chat-support"
-                >
-                  <i className="fas fa-comments mr-2"></i>
-                  Chat ao Vivo
-                </button>
-                <button 
-                  className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors"
-                  data-testid="button-email-support"
-                >
-                  <i className="fas fa-envelope mr-2"></i>
-                  Enviar Email
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+          <p className="text-lg text-gray-600 mb-6">
+            Não encontrou o que procurava?
+          </p>
+          <Button size="lg" data-testid="button-contact-support">
+            <i className="fas fa-headset mr-2"></i>
+            Falar com Suporte
+          </Button>
         </div>
       </div>
     </section>

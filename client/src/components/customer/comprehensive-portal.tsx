@@ -1,461 +1,250 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { KnowledgeBaseSearch } from "@/components/customer/knowledge-base-search";
-import { SlaHoursDashboard } from "@/components/customer/sla-hours-dashboard";
-import { TicketDetailsView } from "@/components/customer/ticket-details-view";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { cn } from "@/lib/utils";
-import type { Ticket, Customer, KnowledgeArticle } from "@shared/schema";
+import { StatsCard } from "@/components/ui/stats-card";
+import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
+import { authService } from "@/lib/auth";
+import type { Ticket } from "@/types/portal";
 
-interface CustomerPortalProps {
-  customerId: string;
-  customerData: Customer;
-}
-
-const priorityColors = {
-  low: "bg-green-100 text-green-800 border-green-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200", 
-  high: "bg-orange-100 text-orange-800 border-orange-200",
-  critical: "bg-red-100 text-red-800 border-red-200"
-};
-
-const statusColors = {
-  open: "bg-blue-100 text-blue-800 border-blue-200",
-  in_progress: "bg-purple-100 text-purple-800 border-purple-200",
-  resolved: "bg-green-100 text-green-800 border-green-200",
-  closed: "bg-gray-100 text-gray-800 border-gray-200"
-};
-
-interface NewTicketData {
-  subject: string;
-  description: string;
-  priority: "low" | "medium" | "high" | "critical";
-  category: string;
-  attachments?: File[];
-}
-
-export function CustomerPortalComprehensive({ customerId, customerData }: CustomerPortalProps) {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const [newTicket, setNewTicket] = useState<NewTicketData>({
-    subject: "",
-    description: "",
-    priority: "medium",
-    category: "",
-    attachments: []
-  });
+export function ComprehensivePortal() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  
+  const user = authService.getCurrentUser();
+  const tenantId = authService.getTenantId();
 
   // Fetch customer tickets
-  const { data: tickets = [], isLoading: isLoadingTickets } = useQuery<Ticket[]>({
-    queryKey: ["/api/tickets/customer", customerId],
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/tickets?customerId=${customerId}`);
-      return response.json();
-    }
+  const { data: tickets = [], isLoading: ticketsLoading } = useQuery({
+    queryKey: ['/api/tickets/customer', user?.id],
+    enabled: !!user?.id,
+  });
+
+  // Fetch customer stats
+  const { data: customerStats } = useQuery({
+    queryKey: ['/api/analytics/customer-stats', user?.id],
+    enabled: !!user?.id,
   });
 
   // Fetch knowledge articles
-  const { data: knowledgeArticles = [], isLoading: isLoadingKnowledge } = useQuery<KnowledgeArticle[]>({
-    queryKey: ["/api/knowledge-base", customerData.tenantId],
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/knowledge-base?tenantId=${customerData.tenantId}`);
-      return response.json();
-    }
+  const { data: knowledgeArticles = [] } = useQuery({
+    queryKey: ['/api/knowledge-articles', tenantId],
+    enabled: !!tenantId,
   });
 
-  // Create ticket mutation
-  const createTicketMutation = useMutation({
-    mutationFn: async (ticketData: NewTicketData) => {
-      const response = await apiRequest("POST", "/api/tickets/customer", {
-        ...ticketData,
-        customerId,
-        tenantId: customerData.tenantId
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Ticket criado com sucesso!",
-        description: `Ticket #${data.ticket.ticketNumber} foi criado. Você receberá atualizações por email.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets/customer"] });
-      setIsTicketDialogOpen(false);
-      setNewTicket({
-        subject: "",
-        description: "",
-        priority: "medium",
-        category: "",
-        attachments: []
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao criar ticket",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Filter tickets based on search
-  const filteredTickets = tickets.filter(ticket =>
-    ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ticket.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter tickets by search term
+  const filteredTickets = tickets.filter((ticket: Ticket) =>
+    ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate ticket stats
-  const ticketStats = {
-    total: tickets.length,
-    open: tickets.filter(t => t.status === "open").length,
-    in_progress: tickets.filter(t => t.status === "in_progress").length,
-    resolved: tickets.filter(t => t.status === "resolved").length,
-    closed: tickets.filter(t => t.status === "closed").length,
-    avgResolutionTime: tickets.length > 0 ? 
-      Math.round(tickets.filter(t => t.resolvedAt).reduce((acc, ticket) => {
-        const created = new Date(ticket.createdAt!).getTime();
-        const resolved = new Date(ticket.resolvedAt!).getTime();
-        return acc + (resolved - created) / (1000 * 60 * 60); // hours
-      }, 0) / tickets.filter(t => t.resolvedAt).length) : 0
+  // Filter knowledge articles by search term
+  const filteredArticles = knowledgeArticles.filter((article: any) =>
+    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    article.content.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const handleCreateTicket = () => {
-    createTicketMutation.mutate(newTicket);
+  const priorityColors = {
+    low: "bg-green-100 text-green-800",
+    medium: "bg-yellow-100 text-yellow-800", 
+    high: "bg-orange-100 text-orange-800",
+    critical: "bg-red-100 text-red-800"
   };
 
-  const getCategoryIcon = (category: string) => {
-    const categoryIcons: Record<string, string> = {
-      "Suporte Técnico": "fa-wrench",
-      "Financeiro": "fa-dollar-sign",
-      "Comercial": "fa-briefcase",
-      "Produto": "fa-box",
-      "Outro": "fa-question-circle"
-    };
-    return categoryIcons[category] || "fa-ticket-alt";
+  const statusColors = {
+    open: "bg-blue-100 text-blue-800",
+    in_progress: "bg-purple-100 text-purple-800",
+    resolved: "bg-green-100 text-green-800",
+    closed: "bg-gray-100 text-gray-800"
   };
-
-  if (isLoadingTickets) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando seu portal...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Portal do Cliente</h1>
-              <Badge className="bg-primary text-white">{customerData.name}</Badge>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-semibold text-gray-900">
+                Portal do Cliente
+              </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="relative"
-                data-testid="notifications-bell"
-              >
-                <i className="fas fa-bell"></i>
-                {ticketStats.open > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {ticketStats.open}
-                  </span>
-                )}
+              <span className="text-sm text-gray-600">
+                Bem-vindo, {user?.username}
+              </span>
+              <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-ticket">
+                <i className="fas fa-plus mr-2"></i>
+                Novo Ticket
               </Button>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-900">{customerData.name}</span>
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {customerData.name.charAt(0).toUpperCase()}
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard">
-              <i className="fas fa-tachometer-alt mr-2"></i>
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="tickets" data-testid="tab-tickets">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Central de Atendimento
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Gerencie seus tickets, consulte nossa base de conhecimento e acompanhe o status do seus atendimentos.
+          </p>
+
+          {/* Stats Cards */}
+          {customerStats && (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+              <StatsCard
+                title="Meus Tickets"
+                value={customerStats.totalTickets || 0}
+                icon="fa-ticket-alt"
+                iconColor="bg-blue-100 text-blue-600"
+              />
+              <StatsCard
+                title="Tickets Abertos"
+                value={customerStats.openTickets || 0}
+                icon="fa-exclamation-circle"
+                iconColor="bg-orange-100 text-orange-600"
+              />
+              <StatsCard
+                title="Tickets Resolvidos"
+                value={customerStats.resolvedTickets || 0}
+                icon="fa-check-circle"
+                iconColor="bg-green-100 text-green-600"
+              />
+              <StatsCard
+                title="Tempo Médio"
+                value={`${customerStats.avgResolutionTime || 0}h`}
+                icon="fa-clock"
+                iconColor="bg-purple-100 text-purple-600"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="tickets" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="tickets" className="flex items-center" data-testid="tab-tickets">
               <i className="fas fa-ticket-alt mr-2"></i>
               Meus Tickets
             </TabsTrigger>
-            <TabsTrigger value="knowledge" data-testid="tab-knowledge">
+            <TabsTrigger value="knowledge" className="flex items-center" data-testid="tab-knowledge">
               <i className="fas fa-book mr-2"></i>
               Base de Conhecimento
             </TabsTrigger>
-            <TabsTrigger value="sla" data-testid="tab-sla">
-              <i className="fas fa-clock mr-2"></i>
-              SLA & Status
-            </TabsTrigger>
-            <TabsTrigger value="profile" data-testid="tab-profile">
+            <TabsTrigger value="profile" className="flex items-center" data-testid="tab-profile">
               <i className="fas fa-user mr-2"></i>
-              Perfil
+              Meu Perfil
             </TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Bem-vindo, {customerData.name.split(' ')[0]}!
-                </h2>
-                <p className="text-gray-600">Aqui está um resumo da sua conta</p>
-              </div>
-              <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button data-testid="button-create-ticket">
-                    <i className="fas fa-plus mr-2"></i>
-                    Novo Ticket
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl" data-testid="dialog-create-ticket">
-                  <DialogHeader>
-                    <DialogTitle>Criar Novo Ticket de Suporte</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="subject">Assunto *</Label>
-                        <Input
-                          id="subject"
-                          value={newTicket.subject}
-                          onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
-                          placeholder="Descreva brevemente o problema"
-                          data-testid="input-ticket-subject"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="category">Categoria</Label>
-                        <Select value={newTicket.category} onValueChange={(value) => setNewTicket({...newTicket, category: value})}>
-                          <SelectTrigger data-testid="select-ticket-category">
-                            <SelectValue placeholder="Selecione uma categoria..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Suporte Técnico">Suporte Técnico</SelectItem>
-                            <SelectItem value="Financeiro">Financeiro</SelectItem>
-                            <SelectItem value="Comercial">Comercial</SelectItem>
-                            <SelectItem value="Produto">Produto</SelectItem>
-                            <SelectItem value="Outro">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="description">Descrição Detalhada *</Label>
-                      <Textarea
-                        id="description"
-                        value={newTicket.description}
-                        onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
-                        placeholder="Descreva o problema em detalhes, incluindo passos para reproduzir, mensagens de erro, etc."
-                        rows={4}
-                        data-testid="textarea-ticket-description"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="priority">Prioridade</Label>
-                      <Select value={newTicket.priority} onValueChange={(value: any) => setNewTicket({...newTicket, priority: value})}>
-                        <SelectTrigger data-testid="select-ticket-priority">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                              Baixa - Dúvidas gerais
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="medium">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                              Média - Problemas que afetam o trabalho
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="high">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-                              Alta - Problemas críticos
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="critical">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                              Crítica - Sistema inoperante
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => setIsTicketDialogOpen(false)}
-                        data-testid="button-cancel-ticket"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button 
-                        onClick={handleCreateTicket}
-                        disabled={!newTicket.subject || !newTicket.description || createTicketMutation.isPending}
-                        data-testid="button-save-ticket"
-                      >
-                        {createTicketMutation.isPending ? (
-                          <>
-                            <i className="fas fa-spinner fa-spin mr-2"></i>
-                            Criando...
-                          </>
-                        ) : (
-                          <>
-                            <i className="fas fa-check mr-2"></i>
-                            Criar Ticket
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total de Tickets</p>
-                      <p className="text-2xl font-bold text-gray-900" data-testid="stat-total-tickets">{ticketStats.total}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-ticket-alt text-blue-600"></i>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Tickets Abertos</p>
-                      <p className="text-2xl font-bold text-orange-600" data-testid="stat-open-tickets">{ticketStats.open}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-clock text-orange-600"></i>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Resolvidos</p>
-                      <p className="text-2xl font-bold text-green-600" data-testid="stat-resolved-tickets">{ticketStats.resolved}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-check-circle text-green-600"></i>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Tempo Médio</p>
-                      <p className="text-2xl font-bold text-gray-900" data-testid="stat-avg-resolution">
-                        {ticketStats.avgResolutionTime}h
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-hourglass-half text-purple-600"></i>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Tickets */}
+          {/* Tickets Tab */}
+          <TabsContent value="tickets" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tickets Recentes</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <i className="fas fa-list mr-2"></i>
+                    Meus Tickets ({filteredTickets.length})
+                  </CardTitle>
+                  <div className="flex items-center space-x-4">
+                    <Input
+                      placeholder="Buscar tickets..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-64"
+                      data-testid="input-search-tickets"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {filteredTickets.slice(0, 5).length === 0 ? (
-                  <div className="text-center py-8">
-                    <i className="fas fa-ticket-alt text-4xl text-gray-300 mb-4"></i>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum ticket ainda</h3>
-                    <p className="text-gray-600 mb-4">Crie seu primeiro ticket de suporte para começar.</p>
-                    <Button onClick={() => setIsTicketDialogOpen(true)} data-testid="button-create-first-ticket">
+                {ticketsLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <i className="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                    <span className="ml-3 text-gray-600">Carregando tickets...</span>
+                  </div>
+                ) : filteredTickets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <i className="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                    <p className="text-lg font-medium text-gray-600 mb-2">
+                      Nenhum ticket encontrado
+                    </p>
+                    <p className="text-gray-500 mb-6">
+                      {searchTerm ? "Tente usar outros termos de busca" : "Crie seu primeiro ticket de suporte"}
+                    </p>
+                    <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-ticket">
                       <i className="fas fa-plus mr-2"></i>
                       Criar Primeiro Ticket
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {filteredTickets.slice(0, 5).map(ticket => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => setSelectedTicketId(ticket.id)}
-                        data-testid={`ticket-summary-${ticket.id}`}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <i className={`fas ${getCategoryIcon(ticket.category || "")} text-gray-600`}></i>
+                  <div className="space-y-4">
+                    {filteredTickets.map((ticket: Ticket) => (
+                      <Card key={ticket.id} className="hover:shadow-md transition-shadow" data-testid={`ticket-${ticket.ticketNumber}`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h3 className="font-semibold text-lg text-gray-900">
+                                  #{ticket.ticketNumber}
+                                </h3>
+                                <Badge className={priorityColors[ticket.priority]}>
+                                  {ticket.priority}
+                                </Badge>
+                                <Badge className={statusColors[ticket.status]}>
+                                  {ticket.status}
+                                </Badge>
+                              </div>
+                              
+                              <h4 className="font-medium text-gray-800 mb-2">
+                                {ticket.subject}
+                              </h4>
+                              
+                              {ticket.description && (
+                                <p className="text-gray-600 mb-3 line-clamp-2">
+                                  {ticket.description}
+                                </p>
+                              )}
+                              
+                              <div className="flex items-center space-x-6 text-sm text-gray-500">
+                                <span>
+                                  <i className="fas fa-calendar mr-1"></i>
+                                  Criado em {formatDate(ticket.createdAt)}
+                                </span>
+                                {ticket.assignee && (
+                                  <span>
+                                    <i className="fas fa-user-tie mr-1"></i>
+                                    Atribuído para {ticket.assignee.username}
+                                  </span>
+                                )}
+                                {ticket.slaDeadline && (
+                                  <span>
+                                    <i className="fas fa-alarm-clock mr-1"></i>
+                                    SLA: {formatDate(ticket.slaDeadline)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="ml-4">
+                              <Button variant="outline" size="sm" data-testid={`button-view-ticket-${ticket.ticketNumber}`}>
+                                <i className="fas fa-eye mr-1"></i>
+                                Ver Detalhes
+                              </Button>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{ticket.subject}</h4>
-                            <p className="text-sm text-gray-600">#{ticket.ticketNumber}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge className={cn("text-xs", statusColors[ticket.status as keyof typeof statusColors])}>
-                            {ticket.status === "open" && "Aberto"}
-                            {ticket.status === "in_progress" && "Em Andamento"}
-                            {ticket.status === "resolved" && "Resolvido"}
-                            {ticket.status === "closed" && "Fechado"}
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            {new Date(ticket.createdAt!).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 )}
@@ -463,195 +252,141 @@ export function CustomerPortalComprehensive({ customerId, customerData }: Custom
             </Card>
           </TabsContent>
 
-          {/* Tickets Tab */}
-          <TabsContent value="tickets" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Meus Tickets</h2>
-                <p className="text-gray-600">Acompanhe o status de todos os seus tickets</p>
-              </div>
-              <div className="flex gap-4">
-                <Input
-                  placeholder="Buscar tickets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64"
-                  data-testid="input-search-tickets"
-                />
-                <Button onClick={() => setIsTicketDialogOpen(true)} data-testid="button-new-ticket">
-                  <i className="fas fa-plus mr-2"></i>
-                  Novo Ticket
-                </Button>
-              </div>
-            </div>
-
+          {/* Knowledge Base Tab */}
+          <TabsContent value="knowledge" className="space-y-6">
             <Card>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Ticket</TableHead>
-                        <TableHead>Assunto</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Prioridade</TableHead>
-                        <TableHead>Criado em</TableHead>
-                        <TableHead>Última Atualização</TableHead>
-                        <TableHead>Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTickets.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            <div className="flex flex-col items-center">
-                              <i className="fas fa-search text-3xl text-gray-300 mb-2"></i>
-                              <p className="text-gray-500">
-                                {searchQuery ? "Nenhum ticket encontrado para sua busca" : "Você ainda não tem tickets"}
-                              </p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredTickets.map(ticket => (
-                          <TableRow key={ticket.id} data-testid={`ticket-row-${ticket.id}`}>
-                            <TableCell className="font-medium">{ticket.ticketNumber}</TableCell>
-                            <TableCell className="max-w-xs">
-                              <div className="truncate" title={ticket.subject}>
-                                {ticket.subject}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <i className={`fas ${getCategoryIcon(ticket.category || "")} text-gray-400`}></i>
-                                <span>{ticket.category || "Sem categoria"}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cn("text-xs", statusColors[ticket.status as keyof typeof statusColors])}>
-                                {ticket.status === "open" && "Aberto"}
-                                {ticket.status === "in_progress" && "Em Andamento"}
-                                {ticket.status === "resolved" && "Resolvido"}
-                                {ticket.status === "closed" && "Fechado"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={cn("text-xs", priorityColors[ticket.priority as keyof typeof priorityColors])}>
-                                {ticket.priority === "low" && "Baixa"}
-                                {ticket.priority === "medium" && "Média"}
-                                {ticket.priority === "high" && "Alta"}
-                                {ticket.priority === "critical" && "Crítica"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(ticket.createdAt!).toLocaleDateString('pt-BR')}</TableCell>
-                            <TableCell>{new Date(ticket.updatedAt!).toLocaleDateString('pt-BR')}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedTicketId(ticket.id)}
-                                data-testid={`button-view-ticket-${ticket.id}`}
-                              >
-                                <i className="fas fa-eye mr-1"></i>
-                                Ver Detalhes
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center">
+                    <i className="fas fa-book mr-2"></i>
+                    Base de Conhecimento ({filteredArticles.length} artigos)
+                  </CardTitle>
+                  <Input
+                    placeholder="Buscar artigos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-64"
+                    data-testid="input-search-articles"
+                  />
                 </div>
+              </CardHeader>
+              <CardContent>
+                {filteredArticles.length === 0 ? (
+                  <div className="text-center py-12">
+                    <i className="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                    <p className="text-lg font-medium text-gray-600 mb-2">
+                      Nenhum artigo encontrado
+                    </p>
+                    <p className="text-gray-500">
+                      {searchTerm ? "Tente usar outros termos de busca" : "A base de conhecimento está em desenvolvimento"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {filteredArticles.map((article: any) => (
+                      <Card key={article.id} className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`article-${article.slug}`}>
+                        <CardContent className="p-6">
+                          <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                            {article.title}
+                          </h3>
+                          <p className="text-gray-600 mb-4 line-clamp-3">
+                            {article.content.replace(/[#*]/g, '').substring(0, 150)}...
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-sm text-gray-500">
+                              <i className="fas fa-eye mr-1"></i>
+                              {article.viewCount} visualizações
+                            </div>
+                            <Button variant="outline" size="sm" data-testid={`button-read-article-${article.slug}`}>
+                              <i className="fas fa-arrow-right mr-1"></i>
+                              Ler Mais
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Knowledge Base Tab */}
-          <TabsContent value="knowledge">
-            <KnowledgeBaseSearch 
-              tenantId={customerData.tenantId} 
-              articles={knowledgeArticles}
-              isLoading={isLoadingKnowledge}
-            />
-          </TabsContent>
-
-          {/* SLA Tab */}
-          <TabsContent value="sla">
-            <SlaHoursDashboard 
-              customerId={customerId}
-              tickets={tickets}
-              tenantId={customerData.tenantId}
-            />
           </TabsContent>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Perfil do Cliente</h2>
-              <p className="text-gray-600">Informações da sua conta</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Profile Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <i className="fas fa-user mr-2"></i>
+                    Informações do Perfil
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nome de Usuário</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                      {user?.username}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                      {user?.email}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nível de Acesso</label>
+                    <div className="mt-1">
+                      <Badge variant="outline">{user?.role}</Badge>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full" data-testid="button-edit-profile">
+                    <i className="fas fa-edit mr-2"></i>
+                    Editar Perfil
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Account Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <i className="fas fa-cog mr-2"></i>
+                    Configurações da Conta
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <Button variant="outline" className="w-full justify-start" data-testid="button-change-password">
+                      <i className="fas fa-key mr-3"></i>
+                      Alterar Senha
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" data-testid="button-notification-settings">
+                      <i className="fas fa-bell mr-3"></i>
+                      Configurações de Notificação
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" data-testid="button-privacy-settings">
+                      <i className="fas fa-shield-alt mr-3"></i>
+                      Configurações de Privacidade
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700" data-testid="button-delete-account">
+                      <i className="fas fa-trash mr-3"></i>
+                      Excluir Conta
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações Básicas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Nome</Label>
-                    <Input value={customerData.name} disabled />
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input value={customerData.email || ""} disabled />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Telefone</Label>
-                    <Input value={customerData.phone || ""} disabled />
-                  </div>
-                  <div>
-                    <Label>Status da Conta</Label>
-                    <Badge className="bg-green-100 text-green-800">Ativo</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Estatísticas da Conta</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 border rounded-lg">
-                    <p className="text-2xl font-bold text-primary">{ticketStats.total}</p>
-                    <p className="text-sm text-gray-600">Total de Tickets</p>
-                  </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <p className="text-2xl font-bold text-green-600">{ticketStats.resolved}</p>
-                    <p className="text-sm text-gray-600">Tickets Resolvidos</p>
-                  </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <p className="text-2xl font-bold text-purple-600">{ticketStats.avgResolutionTime}h</p>
-                    <p className="text-sm text-gray-600">Tempo Médio de Resolução</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Ticket Details Modal */}
-        {selectedTicketId && (
-          <TicketDetailsView
-            ticketId={selectedTicketId}
-            onClose={() => setSelectedTicketId(null)}
-          />
-        )}
       </div>
+
+      {/* Create Ticket Dialog */}
+      <CreateTicketDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+      />
     </div>
   );
 }
