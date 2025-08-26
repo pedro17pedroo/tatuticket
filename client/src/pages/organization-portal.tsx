@@ -14,6 +14,7 @@ import { AgentManagement } from "@/components/organization/agent-management";
 import { AdvancedAnalytics } from "@/components/organization/advanced-analytics";
 import { KnowledgeManagement } from "@/components/organization/knowledge-management";
 import { AIInsights } from "@/components/organization/ai-insights";
+import { TicketManagement } from "@/components/organization/ticket-management";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -300,6 +301,10 @@ export function OrganizationPortal() {
               </Card>
             </div>
             </>
+            )}
+
+            {activeNavItem === 'tickets' && (
+              <TicketManagement tenantId={tenantId} userRole={user.role} />
             )}
             
             {/* Structure Management */}

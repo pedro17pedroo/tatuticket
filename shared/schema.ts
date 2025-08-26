@@ -245,23 +245,26 @@ export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
   createdAt: true,
 });
 
-// Types
+// Types for frontend
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Tenant = typeof tenants.$inferSelect;
-export type InsertTenant = z.infer<typeof insertTenantSchema>;
-export type Ticket = typeof tickets.$inferSelect;
-export type InsertTicket = z.infer<typeof insertTicketSchema>;
 export type Department = typeof departments.$inferSelect;
-export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Team = typeof teams.$inferSelect;
-export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type Ticket = typeof tickets.$inferSelect;
 export type Customer = typeof customers.$inferSelect;
-export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type KnowledgeArticle = typeof knowledgeArticles.$inferSelect;
-export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema>;
 export type SlaConfig = typeof slaConfigs.$inferSelect;
-export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
-export type AuditLog = typeof auditLogs.$inferSelect;
 export type OtpCode = typeof otpCodes.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type InsertTicket = z.infer<typeof insertTicketSchema>;
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema>;
+export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+
+

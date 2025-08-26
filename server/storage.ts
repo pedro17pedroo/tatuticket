@@ -23,6 +23,7 @@ export interface IStorage {
   createTenant(tenant: InsertTenant): Promise<Tenant>;
   updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant>;
   getAllTenants(): Promise<Tenant[]>;
+  getTenantsByStripeSubscription(subscriptionId: string): Promise<Tenant[]>;
 
   // Tickets
   getTicket(id: string): Promise<Ticket | undefined>;
@@ -401,6 +402,10 @@ export class DatabaseStorage implements IStorage {
   async cleanupExpiredOtps(): Promise<void> {
     await db.delete(otpCodes)
       .where(sql`expires_at < now() OR is_used = true`);
+  }
+
+  async getTenantsByStripeSubscription(subscriptionId: string): Promise<Tenant[]> {
+    return await db.select().from(tenants).where(eq(tenants.stripeSubscriptionId, subscriptionId));
   }
 }
 

@@ -209,6 +209,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe payment routes
+  app.post("/api/payments/create-subscription", async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured. Please provide STRIPE_SECRET_KEY." });
+      }
+
+      const { email, planId, companyName, paymentMethodId } = req.body;
+
+      if (!email || !planId) {
+        return res.status(400).json({ message: "Email and plan ID are required" });
+      }
+
+      // Plan pricing mapping
+      const planPricing = {
+        freemium: { priceId: null, amount: 0 },
+        pro: { priceId: "price_pro_monthly", amount: 2900 }, // R$ 29.00 in cents
+        enterprise: { priceId: "price_enterprise", amount: 0 } // Custom pricing
+      };
+
+      const plan = planPricing[planId as keyof typeof planPricing];
+      
+      if (!plan) {
+        return res.status(400).json({ message: "Invalid plan ID" });
+      }
+
+      // For freemium plan, no payment needed
+      if (planId === "freemium") {
+        return res.json({
+          success: true,
+          requiresPayment: false,
+          message: "Freemium account ready"
+        });
+      }
+
+      // For enterprise, redirect to sales
+      if (planId === "enterprise") {
+        return res.json({
+          success: true,
+          requiresPayment: false,
+          contactSales: true,
+          message: "Enterprise plan requires sales contact"
+        });
+      }
+
+      // Create Stripe customer
+      const customer = await stripe.customers.create({
+        email,
+        name: companyName,
+        metadata: { plan: planId }
+      });
+
+      // Create subscription for Pro plan
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: plan.priceId! }],
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          plan: planId,
+          companyName: companyName || ""
+        }
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: null,
+        action: "subscription_created",
+        resourceType: "subscription",
+        resourceId: subscription.id,
+        metadata: { 
+          email, 
+          planId, 
+          customerId: customer.id,
+          subscriptionId: subscription.id 
+        },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+
+      res.json({
+        success: true,
+        requiresPayment: true,
+        subscriptionId: subscription.id,
+        clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
+        customerId: customer.id
+      });
+
+    } catch (error: any) {
+      console.error("Payment creation error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/payments/confirm-subscription", async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ message: "Stripe not configured" });
+      }
+
+      const { subscriptionId, tenantData } = req.body;
+
+      if (!subscriptionId) {
+        return res.status(400).json({ message: "Subscription ID is required" });
+      }
+
+      // Retrieve subscription to verify payment
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+      if (subscription.status !== 'active') {
+        return res.status(400).json({ message: "Payment not completed" });
+      }
+
+      // Create tenant with Stripe info
+      const tenant = await storage.createTenant({
+        ...tenantData,
+        stripeCustomerId: subscription.customer as string,
+        stripeSubscriptionId: subscription.id,
+        status: "active"
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: tenant.id,
+        action: "tenant_created_with_payment",
+        resourceType: "tenant",
+        resourceId: tenant.id,
+        metadata: { 
+          subscriptionId: subscription.id,
+          customerId: subscription.customer,
+          plan: tenantData.plan 
+        },
+        ipAddress: req.ip || null,
+        userAgent: req.get('User-Agent') || null,
+      });
+
+      res.json({
+        success: true,
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          plan: tenant.plan
+        }
+      });
+
+    } catch (error: any) {
+      console.error("Payment confirmation error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Tenant routes
   app.get("/api/tenants", async (req, res) => {
     try {

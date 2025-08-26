@@ -110,7 +110,7 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
     priorities: []
   });
 
-  const totalSteps = onboardingData.selectedPlan === "freemium" ? 5 : 6;
+  const totalSteps = 7; // All plans now go through the payment step (step 6) and completion (step 7)
   const progress = (currentStep / totalSteps) * 100;
 
   // Create account mutation
@@ -643,39 +643,143 @@ export function OnboardingWizard({ isOpen, onClose, initialPlan = "freemium" }: 
             <div className="text-center mb-6">
               <i className="fas fa-credit-card text-3xl text-primary mb-4"></i>
               <h3 className="text-xl font-semibold">Pagamento</h3>
-              <p className="text-gray-600">Escolha sua forma de pagamento</p>
+              <p className="text-gray-600">Complete seu plano {onboardingData.selectedPlan.toUpperCase()}</p>
             </div>
             
-            <div className="space-y-4">
-              {[
-                { id: "card", label: "Cartão de Crédito", icon: "fa-credit-card", desc: "Visa, Master, Amex" },
-                { id: "boleto", label: "Boleto Bancário", icon: "fa-barcode", desc: "Vencimento em 3 dias úteis" },
-                { id: "pix", label: "PIX", icon: "fa-qrcode", desc: "Pagamento instantâneo" }
-              ].map(method => (
-                <Card 
-                  key={method.id} 
-                  className={cn(
-                    "cursor-pointer transition-all",
-                    onboardingData.paymentMethod === method.id ? "border-primary bg-blue-50" : "hover:shadow-md"
-                  )}
-                  onClick={() => updateData({ paymentMethod: method.id as any })}
-                  data-testid={`payment-${method.id}`}
-                >
+            {onboardingData.selectedPlan === "freemium" ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <div className="flex items-center space-x-4">
+                  <i className="fas fa-gift text-green-500 text-2xl"></i>
+                  <div>
+                    <h4 className="font-semibold text-green-800">Plano Gratuito</h4>
+                    <p className="text-green-700">Sua conta gratuita será criada imediatamente!</p>
+                  </div>
+                </div>
+              </div>
+            ) : onboardingData.selectedPlan === "enterprise" ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-center space-x-4">
+                  <i className="fas fa-handshake text-blue-500 text-2xl"></i>
+                  <div>
+                    <h4 className="font-semibold text-blue-800">Plano Enterprise</h4>
+                    <p className="text-blue-700">Nossa equipe entrará em contato para uma proposta personalizada.</p>
+                    <div className="mt-4 p-4 bg-white rounded border">
+                      <h5 className="font-medium mb-2">Informações para contato:</h5>
+                      <div className="text-sm space-y-1">
+                        <p><strong>Empresa:</strong> {onboardingData.companyName}</p>
+                        <p><strong>Email:</strong> {onboardingData.email}</p>
+                        <p><strong>Telefone:</strong> {onboardingData.phone}</p>
+                        <p><strong>Volume esperado:</strong> {onboardingData.expectedTickets} tickets/mês</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Card className="border-primary bg-blue-50">
                   <CardContent className="p-4">
-                    <div className="flex items-center space-x-4">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2",
-                        onboardingData.paymentMethod === method.id ? "bg-primary border-primary" : "border-gray-300"
-                      )}></div>
-                      <i className={`fas ${method.icon} text-2xl text-gray-600`}></i>
+                    <div className="flex justify-between items-center">
                       <div>
-                        <h4 className="font-semibold">{method.label}</h4>
-                        <p className="text-sm text-gray-600">{method.desc}</p>
+                        <h4 className="font-semibold">Plano Pro</h4>
+                        <p className="text-sm text-gray-600">Agentes ilimitados • IA avançada • Integrações</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">R$ 29</p>
+                        <p className="text-sm text-gray-600">por agente/mês</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                
+                <div>
+                  <Label>Método de pagamento</Label>
+                  <div className="grid grid-cols-3 gap-3 mt-2">
+                    {[
+                      { value: "card", label: "Cartão", icon: "fa-credit-card" },
+                      { value: "boleto", label: "Boleto", icon: "fa-barcode" },
+                      { value: "pix", label: "PIX", icon: "fa-mobile-alt" }
+                    ].map(method => (
+                      <div
+                        key={method.value}
+                        className={cn(
+                          "flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors",
+                          onboardingData.paymentMethod === method.value ? "border-primary bg-blue-50" : "hover:bg-gray-50"
+                        )}
+                        onClick={() => updateData({ paymentMethod: method.value as any })}
+                        data-testid={`payment-${method.value}`}
+                      >
+                        <i className={`fas ${method.icon} text-lg mb-2 text-gray-600`}></i>
+                        <span className="text-sm font-medium">{method.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {onboardingData.paymentMethod === "card" && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                    <div>
+                      <Label htmlFor="cardNumber">Número do cartão</Label>
+                      <Input
+                        id="cardNumber"
+                        placeholder="**** **** **** ****"
+                        data-testid="input-card-number"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="cardExpiry">Validade</Label>
+                        <Input
+                          id="cardExpiry"
+                          placeholder="MM/AA"
+                          data-testid="input-card-expiry"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cardCvc">CVC</Label>
+                        <Input
+                          id="cardCvc"
+                          placeholder="***"
+                          maxLength={3}
+                          data-testid="input-card-cvc"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+        
+      case 7:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <i className="fas fa-check-circle text-3xl text-green-500 mb-4"></i>
+              <h3 className="text-xl font-semibold">Configuração Concluída!</h3>
+              <p className="text-gray-600">Sua conta está sendo criada...</p>
+            </div>
+            
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="flex items-start space-x-4">
+                <i className="fas fa-info-circle text-green-500 mt-1"></i>
+                <div>
+                  <h4 className="font-semibold text-green-800">Próximos Passos</h4>
+                  <ul className="text-green-700 text-sm space-y-1 mt-2">
+                    <li>• Você receberá um email de confirmação</li>
+                    <li>• Sua conta será ativada em poucos minutos</li>
+                    <li>• Você será redirecionado para o portal da empresa</li>
+                    <li>• Um tour inicial será apresentado</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-sm text-gray-600">Criando sua conta...</p>
             </div>
           </div>
         );
