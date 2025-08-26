@@ -2,10 +2,13 @@ import jwt from 'jsonwebtoken';
 import { storage } from '../storage';
 import { InsertUser, type User } from '@shared/schema';
 import { AppError } from '../middlewares/error.middleware';
+import { config } from '../config/app.config';
+import { notificationService } from '../integrations';
+import { logger } from '../utils/logger.util';
 
 export class AuthService {
-  private static readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
-  private static readonly JWT_EXPIRES_IN = '7d';
+  private static readonly JWT_SECRET = config.jwt.secret;
+  private static readonly JWT_EXPIRES_IN = config.jwt.expiresIn;
 
   static generateToken(user: User): string {
     return jwt.sign(
@@ -44,6 +47,14 @@ export class AuthService {
       ipAddress: null,
       userAgent: null,
     });
+
+    // Send welcome notification
+    await notificationService.notifyWelcome({
+      email: user.email,
+      name: user.username
+    });
+
+    logger.authEvent('user_registered', user.id, { email: user.email });
 
     const { password, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };

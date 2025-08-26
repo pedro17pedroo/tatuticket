@@ -1,6 +1,8 @@
 import { storage } from '../storage';
 import { InsertOtpCode } from '@shared/schema';
 import { AppError } from '../middlewares/error.middleware';
+import { notificationService } from '../integrations';
+import { logger } from '../utils/logger.util';
 
 export class OtpService {
   static async sendOtp(email: string, type: string = "email_verification", ipAddress?: string, userAgent?: string): Promise<{ message: string, otpCode?: string }> {
@@ -22,9 +24,13 @@ export class OtpService {
       expiresAt
     });
     
-    // In production, this would send an actual email
-    // For demo purposes, we'll log it
-    console.log(`OTP for ${email}: ${code} (expires at ${expiresAt})`);
+    // Send OTP via configured notification channels
+    await notificationService.notifyOTP(
+      { email, phone: undefined }, // Could add phone support
+      code
+    );
+
+    logger.info(`OTP sent to ${email}`, { type, expiresAt });
     
     await storage.createAuditLog({
       userId: null,
