@@ -7,6 +7,8 @@ import ticketRoutes from './ticket.routes';
 import userRoutes from './user.routes';
 import tenantRoutes from './tenant.routes';
 import paymentRoutes from './payment.routes';
+import aiRoutes from './ai.routes';
+import smsRoutes from './sms.routes';
 import knowledgeRoutes from '../controllers/knowledge.controller';
 
 export const registerRoutes = (app: Express): Server => {
@@ -19,6 +21,8 @@ export const registerRoutes = (app: Express): Server => {
   app.use('/api/users', userRoutes);
   app.use('/api/tenants', tenantRoutes);
   app.use('/api/payments', paymentRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/sms', smsRoutes);
   app.use('/api/knowledge-articles', knowledgeRoutes);
 
   // Create HTTP server

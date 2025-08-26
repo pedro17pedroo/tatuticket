@@ -9,6 +9,7 @@ import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { KnowledgeBaseSearch } from "@/components/customer/knowledge-base-search";
 import { TicketDetailsView } from "@/components/customer/ticket-details-view";
 import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
+import { AIChatbot } from "@/components/customer/ai-chatbot";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
 
@@ -356,6 +357,16 @@ export function CustomerPortal() {
       <CreateTicketDialog
         isOpen={isCreateTicketOpen}
         onClose={() => setIsCreateTicketOpen(false)}
+      />
+
+      {/* AI Chatbot - always visible */}
+      <AIChatbot 
+        onCreateTicket={(subject, description) => {
+          console.log('Creating ticket from AI:', { subject, description });
+          // Here you could automatically create the ticket or open the dialog pre-filled
+          setSelectedTicket(null);
+          setActiveView('my-tickets');
+        }}
       />
     </div>
   );

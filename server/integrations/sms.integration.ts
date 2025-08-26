@@ -23,14 +23,9 @@ class SMSService {
 
     try {
       // Dynamic import of Twilio - only load if configured
-      const twilio = await import('twilio').catch(() => null);
+      const { default: twilio } = await import('twilio');
       
-      if (!twilio) {
-        console.warn('📱 Twilio package not available - SMS service disabled');
-        return;
-      }
-
-      this.client = twilio.default(
+      this.client = twilio(
         config.sms.twilio.accountSid!,
         config.sms.twilio.authToken!
       );

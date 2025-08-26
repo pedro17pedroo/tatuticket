@@ -58,19 +58,34 @@ export function AIInsights() {
   const tenantId = authService.getTenantId();
 
   // Fetch AI insights
-  const { data: insights = [], isLoading: insightsLoading } = useQuery({
+  const { data: insights = [], isLoading: insightsLoading } = useQuery<AIInsight[]>({
     queryKey: ['/api/ai/insights', tenantId, timeRange],
     enabled: !!tenantId,
   });
 
   // Fetch predictive analytics
-  const { data: predictiveData, isLoading: predictiveLoading } = useQuery({
+  const { data: predictiveData = {
+    ticketVolumeNext7Days: { predicted: 0, current: 0, trend: 'stable' as const, confidence: 0 },
+    slaRiskTickets: { count: 0, tickets: [] },
+    categoryTrends: [],
+    customerSatisfaction: { predicted: 0, current: 0, factorsInfluencing: [] }
+  }, isLoading: predictiveLoading } = useQuery<PredictiveAnalytics>({
     queryKey: ['/api/ai/predictive-analytics', tenantId, timeRange],
     enabled: !!tenantId,
   });
 
   // Fetch sentiment analysis
-  const { data: sentimentData } = useQuery({
+  const { data: sentimentData = {
+    overall: { score: 0, trend: 'stable' as const },
+    positive: 0,
+    neutral: 0,
+    negative: 0
+  } } = useQuery<{
+    overall: { score: number; trend: string };
+    positive: number;
+    neutral: number;
+    negative: number;
+  }>({
     queryKey: ['/api/ai/sentiment-analysis', tenantId, timeRange],
     enabled: !!tenantId,
   });
@@ -352,7 +367,7 @@ export function AIInsights() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {predictiveData.slaRiskTickets.tickets.map((ticket) => (
+                      {predictiveData.slaRiskTickets.tickets.map((ticket: any) => (
                         <div key={ticket.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                           <div>
                             <p className="font-medium text-gray-900">#{ticket.number}</p>
@@ -383,7 +398,7 @@ export function AIInsights() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {predictiveData.categoryTrends.map((trend, index) => (
+                    {predictiveData.categoryTrends.map((trend: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <p className="font-medium text-gray-900">{trend.category}</p>
@@ -418,10 +433,10 @@ export function AIInsights() {
                 <CardContent>
                   <div className="text-center">
                     <div className="text-4xl mb-4">
-                      {sentimentData.overall >= 0.7 ? '😊' : sentimentData.overall >= 0.4 ? '😐' : '😞'}
+                      {sentimentData.overall.score >= 0.7 ? '😊' : sentimentData.overall.score >= 0.4 ? '😐' : '😞'}
                     </div>
                     <p className="text-2xl font-bold text-gray-900 mb-2">
-                      {(sentimentData.overall * 100).toFixed(1)}%
+                      {(sentimentData.overall.score * 100).toFixed(1)}%
                     </p>
                     <p className="text-gray-600">Satisfação geral dos clientes</p>
                   </div>
