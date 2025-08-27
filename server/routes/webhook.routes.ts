@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { validateBody } from '../middlewares';
-import { catchAsync } from '../middlewares';
+import { validateBody, catchAsync } from '../middlewares';
+import { storage } from '../storage';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -41,34 +41,9 @@ function generateWebhookSignature(payload: any, secret?: string): string {
   return `sha256=${hash.digest('hex')}`;
 }
 
-// Mock data stores
-let webhooks: Webhook[] = [
-  {
-    id: '1',
-    name: 'Notificações Slack',
-    url: 'https://hooks.slack.com/services/xxx',
-    events: ['ticket.created', 'sla.breach'],
-    active: true,
-    headers: {},
-    successCount: 127,
-    failureCount: 3,
-    createdAt: new Date('2025-01-15'),
-    lastTriggered: new Date('2025-01-26')
-  }
-];
-
-let integrations: Integration[] = [
-  {
-    id: '1',
-    name: 'Slack Workspace',
-    type: 'slack',
-    config: { webhook_url: 'https://hooks.slack.com/xxx' },
-    active: true,
-    events: ['ticket.created', 'sla.breach'],
-    status: 'connected',
-    lastSync: new Date('2025-01-26')
-  }
-];
+// Mock data stores (fallback for now)
+let webhooks: Webhook[] = [];
+let integrations: Integration[] = [];
 
 // Webhook routes
 router.get('/', catchAsync(async (req, res) => {
@@ -97,7 +72,7 @@ router.post('/', validateBody(z.object({
     createdAt: new Date()
   };
   
-  webhooks.push(newWebhook);
+  webhooksMock.push(newWebhook);
   
   res.status(201).json({
     success: true,
@@ -107,7 +82,7 @@ router.post('/', validateBody(z.object({
 
 router.patch('/:id/toggle', catchAsync(async (req, res) => {
   const { id } = req.params;
-  const webhook = webhooks.find(w => w.id === id);
+  const webhook = webhooksMock.find(w => w.id === id);
   
   if (!webhook) {
     return res.status(404).json({ error: 'Webhook not found' });
@@ -123,7 +98,7 @@ router.patch('/:id/toggle', catchAsync(async (req, res) => {
 
 router.post('/:id/test', catchAsync(async (req, res) => {
   const { id } = req.params;
-  const webhook = webhooks.find(w => w.id === id);
+  const webhook = webhooksMock.find(w => w.id === id);
   
   if (!webhook) {
     return res.status(404).json({ error: 'Webhook not found' });
@@ -178,13 +153,13 @@ router.post('/:id/test', catchAsync(async (req, res) => {
 
 router.delete('/:id', catchAsync(async (req, res) => {
   const { id } = req.params;
-  const index = webhooks.findIndex(w => w.id === id);
+  const index = webhooksMock.findIndex(w => w.id === id);
   
   if (index === -1) {
     return res.status(404).json({ error: 'Webhook not found' });
   }
   
-  webhooks.splice(index, 1);
+  webhooksMock.splice(index, 1);
   
   res.json({
     success: true,
@@ -193,11 +168,11 @@ router.delete('/:id', catchAsync(async (req, res) => {
 }));
 
 // Integration routes
-router.get('/integrations', catchAsync(async (req, res) => {
-  res.json({ integrations });
+router.get('/integrationsMock', catchAsync(async (req, res) => {
+  res.json({ integrationsMock });
 }));
 
-router.post('/integrations', validateBody(z.object({
+router.post('/integrationsMock', validateBody(z.object({
   type: z.string(),
   config: z.record(z.any())
 })), catchAsync(async (req, res) => {
@@ -214,7 +189,7 @@ router.post('/integrations', validateBody(z.object({
     lastSync: new Date()
   };
   
-  integrations.push(newIntegration);
+  integrationsMock.push(newIntegration);
   
   res.status(201).json({
     success: true,
@@ -222,9 +197,9 @@ router.post('/integrations', validateBody(z.object({
   });
 }));
 
-// Utility function to trigger webhooks
+// Utility function to trigger webhooksMock
 export async function triggerWebhooks(event: string, data: any) {
-  const activeWebhooks = webhooks.filter(w => w.active && w.events.includes(event));
+  const activeWebhooks = webhooksMock.filter(w => w.active && w.events.includes(event));
   
   const promises = activeWebhooks.map(async (webhook) => {
     try {

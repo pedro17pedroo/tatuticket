@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { storage } from "./storage";
+import { AuthService } from "./services/auth.service";
 import type { InsertUser, InsertTenant, InsertTicket, InsertDepartment, InsertTeam, InsertCustomer, InsertKnowledgeArticle, InsertSlaConfig } from "@shared/schema";
 
 export async function seedDatabase() {
@@ -29,11 +30,11 @@ export async function seedDatabase() {
       }
     });
 
-    // Create super admin user
+    // Create super admin user with hashed password
     const superAdmin = await storage.createUser({
       username: "Super Admin",
       email: "admin@tatuticket.com",
-      password: "admin123", // In production, this would be hashed
+      password: await AuthService.hashPassword("admin123"),
       role: "super_admin",
       tenantId: null,
       isActive: true
@@ -43,7 +44,7 @@ export async function seedDatabase() {
     const techCorpAdmin = await storage.createUser({
       username: "João Silva",
       email: "empresa@test.com",
-      password: "empresa123",
+      password: await AuthService.hashPassword("empresa123"),
       role: "admin",
       tenantId: techCorpTenant.id,
       isActive: true
@@ -52,7 +53,7 @@ export async function seedDatabase() {
     const techCorpAgent1 = await storage.createUser({
       username: "Maria Santos",
       email: "maria.santos@techcorp.com",
-      password: "agent123",
+      password: await AuthService.hashPassword("agent123"),
       role: "agent",
       tenantId: techCorpTenant.id,
       isActive: true
@@ -61,7 +62,7 @@ export async function seedDatabase() {
     const techCorpAgent2 = await storage.createUser({
       username: "Pedro Lima",
       email: "pedro.lima@techcorp.com",
-      password: "agent123",
+      password: await AuthService.hashPassword("agent123"),
       role: "agent",
       tenantId: techCorpTenant.id,
       isActive: true
@@ -70,7 +71,7 @@ export async function seedDatabase() {
     const techCorpManager = await storage.createUser({
       username: "Ana Costa",
       email: "ana.costa@techcorp.com",
-      password: "manager123",
+      password: await AuthService.hashPassword("manager123"),
       role: "manager",
       tenantId: techCorpTenant.id,
       isActive: true
@@ -80,7 +81,7 @@ export async function seedDatabase() {
     const customerUser = await storage.createUser({
       username: "Cliente Demo",
       email: "cliente@test.com",
-      password: "cliente123",
+      password: await AuthService.hashPassword("cliente123"),
       role: "user",
       tenantId: techCorpTenant.id,
       isActive: true

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { storage } from '../storage';
 import { InsertUser, type User } from '@shared/schema';
 import { AppError } from '../middlewares/error.middleware';
@@ -11,6 +12,9 @@ export class AuthService {
   private static readonly JWT_EXPIRES_IN = config.jwt.expiresIn;
 
   static generateToken(user: User): string {
+    const secret = this.JWT_SECRET || 'fallback-secret-key';
+    const expiresIn = this.JWT_EXPIRES_IN || '24h';
+    
     return jwt.sign(
       { 
         id: user.id, 
@@ -18,9 +22,18 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId
       },
-      this.JWT_SECRET,
-      { expiresIn: this.JWT_EXPIRES_IN }
+      secret,
+      { expiresIn }
     );
+  }
+
+  static async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 
   static async registerUser(userData: InsertUser): Promise<{ user: Omit<User, 'password'>, token: string }> {
@@ -30,8 +43,12 @@ export class AuthService {
       throw new AppError('User already exists', 400);
     }
 
+    // Hash password before storing
+    const hashedPassword = await this.hashPassword(userData.password);
+    const userDataWithHashedPassword = { ...userData, password: hashedPassword };
+
     // Create user
-    const user = await storage.createUser(userData);
+    const user = await storage.createUser(userDataWithHashedPassword);
     
     // Generate token
     const token = this.generateToken(user);
@@ -67,15 +84,32 @@ export class AuthService {
 
     const user = await storage.getUserByEmail(email);
     
-    if (!user || user.password !== password) {
+    if (!user) {
       // Create failed login audit log
       await storage.createAuditLog({
         userId: null,
-        tenantId: user?.tenantId || null,
+        tenantId: null,
         action: "login_failed",
         resourceType: "user",
-        resourceId: user?.id || null,
-        metadata: { email, reason: "invalid_credentials" },
+        resourceId: null,
+        metadata: { email, reason: "user_not_found" },
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      });
+      throw new AppError('Invalid credentials', 401);
+    }
+
+    const isPasswordValid = await this.comparePassword(password, user.password);
+    
+    if (!isPasswordValid) {
+      // Create failed login audit log
+      await storage.createAuditLog({
+        userId: null,
+        tenantId: user.tenantId || null,
+        action: "login_failed",
+        resourceType: "user",
+        resourceId: user.id || null,
+        metadata: { email, reason: "invalid_password" },
         ipAddress: ipAddress || null,
         userAgent: userAgent || null,
       });
