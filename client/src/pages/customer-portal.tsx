@@ -11,6 +11,7 @@ import { TicketDetailsView } from "@/components/customer/ticket-details-view";
 import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
 import { SLAExceededBilling } from "@/components/customer/SLAExceededBilling";
 import { AIChatbot } from "@/components/customer/ai-chatbot";
+import { CustomerChatSystem } from "@/components/portal-completion";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
 
@@ -196,7 +197,10 @@ export function CustomerPortal() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <KnowledgeBaseSearch onClose={handleBackToPortal} />
+          <KnowledgeBaseSearch />
+          <div className="mt-6 text-center">
+            <Button onClick={handleBackToPortal}>Voltar ao Portal</Button>
+          </div>
         </div>
       </div>
     );
@@ -405,14 +409,7 @@ export function CustomerPortal() {
       />
 
       {/* AI Chatbot - always visible */}
-      <AIChatbot 
-        onCreateTicket={(subject, description) => {
-          console.log('Creating ticket from AI:', { subject, description });
-          // Here you could automatically create the ticket or open the dialog pre-filled
-          setSelectedTicket(null);
-          setActiveView('my-tickets');
-        }}
-      />
+      <AIChatbot />
     </div>
   );
 }

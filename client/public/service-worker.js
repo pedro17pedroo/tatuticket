@@ -146,62 +146,124 @@ async function handleAPICache(request) {
   }
 }
 
-// Push notifications
+// Advanced Push notifications with customization by type
 self.addEventListener('push', (event) => {
-  const options = {
+  let notificationData = {
+    title: 'TatuTicket',
     body: 'Você tem novas atualizações no TatuTicket',
     icon: '/icon-192x192.png',
     badge: '/icon-192x192.png',
     vibrate: [100, 50, 100],
-    data: {
-      url: '/'
-    },
+    data: { url: '/' },
     actions: [
-      {
-        action: 'open',
-        title: 'Abrir App'
-      },
-      {
-        action: 'close', 
-        title: 'Fechar'
-      }
-    ]
+      { action: 'open', title: 'Abrir App' },
+      { action: 'close', title: 'Fechar' }
+    ],
+    requireInteraction: false,
+    silent: false,
+    tag: 'tatuticket-general'
   };
 
   if (event.data) {
-    const payload = event.data.json();
-    options.body = payload.body || options.body;
-    options.data = payload.data || options.data;
+    try {
+      const payload = event.data.json();
+      notificationData = {
+        ...notificationData,
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        data: payload.data || notificationData.data,
+        icon: payload.icon || notificationData.icon,
+        tag: payload.tag || 'tatuticket-notification'
+      };
+      
+      // Customize by notification type
+      if (payload.type === 'ticket.created') {
+        notificationData.icon = '/icon-192x192.png';
+        notificationData.actions = [
+          { action: 'view_ticket', title: 'Ver Ticket' },
+          { action: 'dismiss', title: 'Dispensar' }
+        ];
+        notificationData.data = { ...notificationData.data, ticketId: payload.ticketId };
+      } else if (payload.type === 'sla.breach') {
+        notificationData.vibrate = [200, 100, 200, 100, 200];
+        notificationData.requireInteraction = true;
+        notificationData.tag = 'sla-critical';
+        notificationData.actions = [
+          { action: 'urgent_view', title: 'Ver Urgente' },
+          { action: 'dismiss', title: 'Dispensar' }
+        ];
+      } else if (payload.type === 'assignment') {
+        notificationData.actions = [
+          { action: 'accept', title: 'Aceitar' },
+          { action: 'view', title: 'Visualizar' }
+        ];
+      }
+    } catch (e) {
+      console.error('Error parsing push notification data:', e);
+    }
   }
 
   event.waitUntil(
-    self.registration.showNotification('TatuTicket', options)
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      vibrate: notificationData.vibrate,
+      data: notificationData.data,
+      actions: notificationData.actions,
+      tag: notificationData.tag,
+      renotify: true,
+      requireInteraction: notificationData.requireInteraction,
+      silent: notificationData.silent
+    })
   );
 });
 
-// Notification click handler
+// Enhanced notification click handler with action support
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'open') {
-    const urlToOpen = event.notification.data?.url || '/';
-    
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true })
-        .then((clientList) => {
-          // Foca em tab existente se disponível
-          for (const client of clientList) {
-            if (client.url === urlToOpen && 'focus' in client) {
-              return client.focus();
-            }
-          }
-          // Senão, abre nova tab
-          if (clients.openWindow) {
-            return clients.openWindow(urlToOpen);
-          }
-        })
-    );
+  const action = event.action;
+  const data = event.notification.data || {};
+  let urlToOpen = data.url || '/';
+
+  // Handle different actions
+  if (action === 'view_ticket' && data.ticketId) {
+    urlToOpen = `/organization/tickets/${data.ticketId}`;
+  } else if (action === 'urgent_view') {
+    urlToOpen = data.url || '/organization/dashboard';
+  } else if (action === 'accept' && data.ticketId) {
+    // Accept assignment and navigate
+    urlToOpen = `/organization/tickets/${data.ticketId}?accept=true`;
+  } else if (action === 'dismiss' || action === 'close') {
+    // Just close, don't navigate
+    return;
+  } else if (!action && event.notification.data?.url) {
+    // Default click without specific action
+    urlToOpen = event.notification.data.url;
   }
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Try to focus existing tab with same domain
+        const targetOrigin = new URL(urlToOpen, self.registration.scope).origin;
+        for (const client of clientList) {
+          if (client.url.includes(targetOrigin) && 'focus' in client) {
+            client.focus();
+            // Navigate to specific URL
+            if (client.navigate) {
+              return client.navigate(urlToOpen);
+            }
+            return client;
+          }
+        }
+        // Open new tab if none found
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
 });
 
 // Background sync para envio offline

@@ -19,6 +19,7 @@ import { GamificationDashboard } from "@/components/organization/gamification-da
 import { ReportExport } from "@/components/organization/report-export";
 import { WebhookManager } from "@/components/organization/webhook-manager";
 import { WorkflowEditor } from "@/components/organization/WorkflowEditor";
+import { AdvancedTicketManagement } from "@/components/portal-completion";
 import { AdvancedIntegrations } from "@/components/organization/AdvancedIntegrations";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";

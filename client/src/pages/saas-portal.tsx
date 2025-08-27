@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authService, type RegisterData } from "@/lib/auth";
 import { FAQSection } from "@/components/saas/faq-section";
 import { OnboardingWizard } from "@/components/saas/onboarding-wizard";
+import { EnhancedOnboardingFlow, SystemCompletionStatus } from "@/components/portal-completion";
 import { AICustomerChatbot } from '@/components/saas/AICustomerChatbot';
 import { TestimonialsSection } from "@/components/saas/testimonials-section";
 import { PricingPlans } from "@/components/saas/pricing-plans";

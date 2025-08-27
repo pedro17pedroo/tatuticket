@@ -49,6 +49,23 @@ export class TicketService {
     // For now, just log the event
     logger.info('Ticket created', { ticketId: ticket.id, ticketNumber: ticket.ticketNumber });
     
+    // Trigger webhooks for ticket creation
+    try {
+      const { triggerWebhooks } = await import('../routes/webhook.routes');
+      await triggerWebhooks('ticket.created', {
+        ticketId: ticket.id,
+        tenantId: ticket.tenantId,
+        subject: ticket.subject,
+        priority: ticket.priority,
+        status: ticket.status,
+        category: ticket.category,
+        ticketNumber: ticket.ticketNumber,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to trigger ticket creation webhooks:', error);
+    }
+    
     return ticket;
   }
 
@@ -73,6 +90,19 @@ export class TicketService {
       ipAddress: ipAddress || null,
       userAgent: userAgent || null,
     });
+    
+    // Trigger webhooks for ticket updates
+    try {
+      const { triggerWebhooks } = await import('../routes/webhook.routes');
+      await triggerWebhooks('ticket.updated', {
+        ticketId: ticket.id,
+        tenantId: ticket.tenantId,
+        updates,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to trigger ticket update webhooks:', error);
+    }
     
     return ticket;
   }

@@ -15,6 +15,7 @@ import { authService } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlobalUserManagement } from "@/components/admin/global-user-management";
 import { FinancialDashboard } from "@/components/admin/FinancialDashboard";
+import { GlobalTenantManagement, RevenueAnalyticsDashboard } from "@/components/portal-completion";
 import type { NavigationItem, GlobalStats } from "@/types/portal";
 import type { Tenant, InsertTenant } from "@shared/schema";
 

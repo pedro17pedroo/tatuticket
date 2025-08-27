@@ -9,6 +9,7 @@ import tenantRoutes from './tenant.routes';
 import paymentRoutes from './payment.routes';
 import aiRoutes from './ai.routes';
 import smsRoutes from './sms.routes';
+import otpRoutes from './otp.routes';
 import knowledgeRoutes from '../controllers/knowledge.controller';
 import webhookRoutes from './webhook.routes';
 import subscriptionRoutes from './subscription.routes';
@@ -31,6 +32,7 @@ export const registerRoutes = (app: Express): Server => {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/ai', aiRoutes);
   app.use('/api/sms', smsRoutes);
+  app.use('/api/otp', otpRoutes);
   app.use('/api/knowledge-articles', knowledgeRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/workflows', workflowRoutes);

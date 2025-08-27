@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validateBody } from '../middlewares';
 import { catchAsync } from '../middlewares';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -13,6 +14,8 @@ interface Webhook {
   active: boolean;
   secret?: string;
   headers: Record<string, string>;
+  maxRetries?: number;
+  retryDelay?: number;
   successCount: number;
   failureCount: number;
   createdAt: Date;
@@ -28,6 +31,14 @@ interface Integration {
   events: string[];
   status: 'connected' | 'error' | 'disconnected';
   lastSync?: Date;
+}
+
+// Utility function to generate webhook signature
+function generateWebhookSignature(payload: any, secret?: string): string {
+  if (!secret) return '';
+  const hash = crypto.createHmac('sha256', secret);
+  hash.update(JSON.stringify(payload));
+  return `sha256=${hash.digest('hex')}`;
 }
 
 // Mock data stores
@@ -130,12 +141,26 @@ router.post('/:id/test', catchAsync(async (req, res) => {
   };
   
   try {
-    // In real implementation, make HTTP request to webhook.url
-    console.log(`📡 Testing webhook ${webhook.name} at ${webhook.url}`);
-    console.log('Test payload:', testPayload);
+    // Make real HTTP request to webhook URL
+    const response = await fetch(webhook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-TatuTicket-Event': 'webhook.test',
+        'X-TatuTicket-Signature': generateWebhookSignature(testPayload, webhook.secret),
+        ...webhook.headers
+      },
+      body: JSON.stringify(testPayload)
+    });
     
-    webhook.successCount++;
-    webhook.lastTriggered = new Date();
+    if (response.ok) {
+      webhook.successCount++;
+      webhook.lastTriggered = new Date();
+      console.log(`✅ Webhook test successful: ${webhook.name}`);
+    } else {
+      webhook.failureCount++;
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     
     res.json({
       success: true,
@@ -201,7 +226,7 @@ router.post('/integrations', validateBody(z.object({
 export async function triggerWebhooks(event: string, data: any) {
   const activeWebhooks = webhooks.filter(w => w.active && w.events.includes(event));
   
-  for (const webhook of activeWebhooks) {
+  const promises = activeWebhooks.map(async (webhook) => {
     try {
       const payload = {
         event,
@@ -210,17 +235,45 @@ export async function triggerWebhooks(event: string, data: any) {
         webhook_id: webhook.id
       };
       
-      // In real implementation, make HTTP request
-      console.log(`📡 Triggering webhook ${webhook.name} for event ${event}`);
-      console.log('Payload:', payload);
-      
-      webhook.successCount++;
-      webhook.lastTriggered = new Date();
+      // Make real HTTP request with retry logic
+      let retries = webhook.maxRetries || 3;
+      while (retries > 0) {
+        try {
+          const response = await fetch(webhook.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-TatuTicket-Event': event,
+              'X-TatuTicket-Signature': generateWebhookSignature(payload, webhook.secret),
+              ...webhook.headers
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            webhook.successCount++;
+            webhook.lastTriggered = new Date();
+            console.log(`✅ Webhook ${webhook.name} triggered successfully for event ${event}`);
+            break;
+          } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        } catch (error) {
+          retries--;
+          if (retries === 0) {
+            throw error;
+          }
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, webhook.retryDelay || 5000));
+        }
+      }
     } catch (error) {
       console.error(`Failed to trigger webhook ${webhook.name}:`, error);
       webhook.failureCount++;
     }
-  }
+  });
+  
+  await Promise.allSettled(promises);
 }
 
 export default router;

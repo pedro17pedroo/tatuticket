@@ -252,6 +252,20 @@ class NotificationService {
     };
 
     await this.notifyMultipleUsers(assignedUserIds, tenantId, payload);
+    
+    // Trigger webhooks for SLA breach
+    try {
+      const { triggerWebhooks } = await import('../routes/webhook.routes');
+      await triggerWebhooks('sla.breach', {
+        ticketId,
+        tenantId,
+        breachType,
+        ticketNumber: metadata.ticketNumber,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to trigger SLA breach webhooks:', error);
+    }
   }
 
   async notifySystemMaintenance(
