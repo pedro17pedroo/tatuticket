@@ -261,6 +261,10 @@ export function SaasPortal() {
         isOpen={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
         initialPlan={selectedPlan}
+        onComplete={(data) => {
+          console.log('Onboarding completed:', data);
+          setIsOnboardingOpen(false);
+        }}
       />
 
       {/* AI Customer Chatbot */}

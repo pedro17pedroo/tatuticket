@@ -116,6 +116,10 @@ export function FinancialDashboard() {
 
   const finalRevenueMetrics = revenueMetrics || fallbackRevenueMetrics;
   const finalTenantsData = tenantsData || fallbackTenantsData;
+  
+  // Alias para facilitar o uso
+  const revenue = finalRevenueMetrics;
+  const tenants = finalTenantsData;
 
   const displayRevenueMetrics = finalRevenueMetrics;
   const displayTenantsData = finalTenantsData;
@@ -152,12 +156,12 @@ export function FinancialDashboard() {
   };
 
   const totalCurrentRevenue = displayTenantsData
-    .filter(t => t.status === 'active')
-    .reduce((sum, t) => sum + t.mrr, 0);
+    .filter(t => t.paymentStatus === 'current')
+    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
 
   const overdueRevenue = displayTenantsData
-    .filter(t => t.status === 'past_due')
-    .reduce((sum, t) => sum + t.mrr, 0);
+    .filter(t => t.paymentStatus === 'overdue')
+    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
 
   return (
     <div className="space-y-6" data-testid="financial-dashboard">

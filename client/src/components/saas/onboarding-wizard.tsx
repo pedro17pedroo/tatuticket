@@ -112,7 +112,14 @@ const PLAN_OPTIONS = [
   },
 ];
 
-export function OnboardingWizard({ onComplete }: { onComplete: (data: OnboardingData) => void }) {
+interface OnboardingWizardProps {
+  onComplete?: (data: OnboardingData) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  initialPlan?: string;
+}
+
+export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialPlan = "freemium" }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
     step: 1,
@@ -166,7 +173,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: (data: Onboarding
     },
     onSuccess: (result) => {
       toast({ title: 'Organização criada com sucesso!' });
-      onComplete(data);
+      onComplete?.(data);
     },
     onError: (error) => {
       toast({ 
@@ -603,10 +610,10 @@ function PlanSelectionStep({ data, onChange }: {
 
       <Tabs 
         value={data.plan.billingCycle} 
-        onValueChange={(value: 'monthly' | 'yearly') => 
+        onValueChange={(value: string) => 
           onChange({
             ...data,
-            plan: { ...data.plan, billingCycle: value }
+            plan: { ...data.plan, billingCycle: value as 'monthly' | 'yearly' }
           })
         }
         className="w-full"

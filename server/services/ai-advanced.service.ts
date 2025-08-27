@@ -67,46 +67,112 @@ class AIAdvancedService {
     }
   }
 
-  async predictSLABreach(ticketId: string, priority: string, complexity: string, teamLoad: number): Promise<SLAPrediction> {
-    try {
-      if (!this.openaiEnabled) {
-        return this.mockSLAPrediction(ticketId, priority, complexity, teamLoad);
-      }
+  private mockSLAPrediction(ticketId: string, priority: string, complexity: string, teamLoad: number): SLAPrediction {
+    // Mock SLA breach prediction algorithm
+    let breachProbability = 20; // Base probability
+    const riskFactors: string[] = [];
+    const recommendedActions: string[] = [];
 
-      // Real OpenAI-based SLA prediction
-      return await this.performRealSLAPrediction(ticketId, priority, complexity, teamLoad);
-    } catch (error) {
-      console.error('❌ AI SLA prediction failed:', error);
-      return this.mockSLAPrediction(ticketId, priority, complexity, teamLoad);
+    // Adjust based on priority
+    if (priority === 'critical') {
+      breachProbability += 40;
+      riskFactors.push('Critical priority ticket');
+    } else if (priority === 'high') {
+      breachProbability += 25;
+      riskFactors.push('High priority ticket');
     }
+
+    // Adjust based on complexity
+    if (complexity === 'high') {
+      breachProbability += 30;
+      riskFactors.push('High complexity issue');
+    } else if (complexity === 'medium') {
+      breachProbability += 15;
+    }
+
+    // Adjust based on team load
+    if (teamLoad > 80) {
+      breachProbability += 25;
+      riskFactors.push('Team overloaded');
+    } else if (teamLoad > 60) {
+      breachProbability += 15;
+      riskFactors.push('High team utilization');
+    }
+
+    // Generate recommendations
+    if (breachProbability > 70) {
+      recommendedActions.push('Immediate escalation required');
+      recommendedActions.push('Assign to senior agent');
+    } else if (breachProbability > 40) {
+      recommendedActions.push('Monitor closely');
+      recommendedActions.push('Consider priority adjustment');
+    } else {
+      recommendedActions.push('Standard workflow');
+    }
+
+    return {
+      ticketId,
+      breachProbability: Math.min(100, breachProbability),
+      timeToBreachHours: Math.max(1, 24 - (breachProbability / 100) * 20),
+      riskFactors,
+      recommendedActions
+    };
   }
 
-  async getCustomerInsights(customerId: string): Promise<CustomerInsight> {
-    try {
-      if (!this.openaiEnabled) {
-        return this.mockCustomerInsights(customerId);
+  private mockCustomerInsights(customerId: string): CustomerInsight {
+    // Mock customer insights
+    const satisfactionScore = Math.floor(Math.random() * 40) + 60; // 60-100
+    const churnRisk = Math.floor(Math.random() * 30) + (satisfactionScore < 70 ? 30 : 10);
+    
+    return {
+      customerId,
+      satisfactionScore,
+      churnRisk,
+      preferredChannels: ['email', 'chat', 'phone'][Math.floor(Math.random() * 3)] === 'email' ? ['email'] : ['chat', 'phone'],
+      responseTimePreference: ['immediate', 'within_hour', 'same_day'][Math.floor(Math.random() * 3)],
+      complexityPreference: ['simple', 'detailed', 'technical'][Math.floor(Math.random() * 3)],
+      historicalPatterns: {
+        commonIssues: ['login_issues', 'billing_questions', 'feature_requests'],
+        averageResolutionTime: Math.floor(Math.random() * 48) + 2,
+        escalationRate: Math.floor(Math.random() * 20) + 5
       }
-
-      // Real customer insights analysis
-      return await this.performRealCustomerInsights(customerId);
-    } catch (error) {
-      console.error('❌ AI customer insights failed:', error);
-      return this.mockCustomerInsights(customerId);
-    }
+    };
   }
 
-  async suggestKnowledgeBaseArticles(ticketContent: string, category?: string): Promise<KnowledgeBaseSuggestion[]> {
-    try {
-      if (!this.openaiEnabled) {
-        return this.mockKnowledgeBaseSuggestions(ticketContent, category);
+  private mockKnowledgeBaseSuggestions(ticketContent: string, category?: string): KnowledgeBaseSuggestion[] {
+    // Mock knowledge base suggestions
+    const mockArticles = [
+      {
+        articleId: 'kb-001',
+        title: 'Como resolver problemas de login',
+        relevanceScore: 85,
+        section: 'Autenticação',
+        summary: 'Passos para resolver problemas comuns de login e recuperação de senha'
+      },
+      {
+        articleId: 'kb-002', 
+        title: 'Configuração de integrações',
+        relevanceScore: 72,
+        section: 'Integrações',
+        summary: 'Guia completo para configurar integrações com sistemas externos'
+      },
+      {
+        articleId: 'kb-003',
+        title: 'Troubleshooting de performance',
+        relevanceScore: 68,
+        section: 'Performance',
+        summary: 'Como identificar e resolver problemas de performance no sistema'
       }
+    ];
 
-      // Real knowledge base suggestions
-      return await this.performRealKnowledgeBaseSuggestions(ticketContent, category);
-    } catch (error) {
-      console.error('❌ AI KB suggestions failed:', error);
-      return this.mockKnowledgeBaseSuggestions(ticketContent, category);
+    // Filter by category if provided
+    if (category) {
+      return mockArticles.filter(article => 
+        article.section.toLowerCase().includes(category.toLowerCase())
+      ).slice(0, 2);
     }
+
+    return mockArticles.slice(0, 3);
   }
 
   private mockTicketAnalysis(ticketId: string, content: string): TicketAnalysis {
@@ -199,7 +265,7 @@ class AIAdvancedService {
     }
   }
 
-  async predictSLABreach(tickets: any[]): Promise<SLAPrediction[]> {
+  async predictSLABreachBulk(tickets: any[]): Promise<SLAPrediction[]> {
     try {
       return tickets.map(ticket => {
         const age = (Date.now() - new Date(ticket.createdAt).getTime()) / (1000 * 60 * 60); // hours
