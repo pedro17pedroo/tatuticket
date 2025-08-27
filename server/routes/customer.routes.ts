@@ -71,7 +71,7 @@ router.get('/invoices', authenticateToken, catchAsync(async (req: AuthRequest, r
         date: '2025-01-15',
         dueDate: '2025-02-14',
         amount: 299.99,
-        currency: 'BRL',
+        currency: 'AOA',
         status: 'paid',
         description: 'Plano Professional - Janeiro 2025',
         items: [
@@ -91,7 +91,7 @@ router.get('/invoices', authenticateToken, catchAsync(async (req: AuthRequest, r
         date: '2025-01-20',
         dueDate: '2025-02-19',
         amount: 45.50,
-        currency: 'BRL',
+        currency: 'AOA',
         status: 'pending',
         description: 'Horas SLA excedentes - Janeiro 2025',
         items: [
@@ -111,7 +111,7 @@ router.get('/invoices', authenticateToken, catchAsync(async (req: AuthRequest, r
         date: '2024-12-15',
         dueDate: '2025-01-14',
         amount: 299.99,
-        currency: 'BRL',
+        currency: 'AOA',
         status: 'overdue',
         description: 'Plano Professional - Dezembro 2024',
         items: [

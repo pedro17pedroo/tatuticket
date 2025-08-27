@@ -415,7 +415,7 @@ export const subscriptions = pgTable("subscriptions", {
   cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
   billingCycle: text("billing_cycle").default("monthly"), // monthly, yearly
   amount: decimal("amount", { precision: 10, scale: 2 }),
-  currency: text("currency").default("brl"),
+  currency: text("currency").default("aoa"),
   trialStart: timestamp("trial_start"),
   trialEnd: timestamp("trial_end"),
   metadata: jsonb("metadata"),
@@ -429,7 +429,7 @@ export const invoices = pgTable("invoices", {
   subscriptionId: varchar("subscription_id"),
   stripeInvoiceId: text("stripe_invoice_id").unique(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  currency: text("currency").default("brl"),
+  currency: text("currency").default("aoa"),
   status: text("status").notNull(), // draft, open, paid, void, uncollectible
   description: text("description"),
   dueDate: timestamp("due_date"),
@@ -442,7 +442,7 @@ export const paymentMethods = pgTable("payment_methods", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar("tenant_id").notNull(),
   stripePaymentMethodId: text("stripe_payment_method_id").unique(),
-  type: text("type").notNull(), // card, boleto, pix
+  type: text("type").notNull(), // card, multicaixa_express, unitel_money, bank_transfer, referencia_pagamento
   brand: text("brand"), // visa, mastercard, etc
   last4: text("last4"),
   expiryMonth: integer("expiry_month"),
@@ -450,6 +450,57 @@ export const paymentMethods = pgTable("payment_methods", {
   isDefault: boolean("is_default").default(false),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Angola Payment Methods
+export const angolaPayments = pgTable("angola_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  invoiceId: varchar("invoice_id").notNull(),
+  paymentMethod: text("payment_method").notNull(), // multicaixa_express, unitel_money, bank_transfer, referencia_pagamento
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("aoa"),
+  status: text("status").notNull().default("pending"), // pending, processing, approved, rejected, expired
+  
+  // Multicaixa Express fields
+  multicaixaReference: text("multicaixa_reference"),
+  multicaixaEntity: text("multicaixa_entity"),
+  
+  // Unitel Money fields
+  unitelPhoneNumber: text("unitel_phone_number"),
+  unitelTransactionId: text("unitel_transaction_id"),
+  
+  // Bank Transfer fields
+  bankName: text("bank_name"),
+  bankIban: text("bank_iban"),
+  accountHolder: text("account_holder"),
+  swiftCode: text("swift_code"),
+  proofOfPaymentUrl: text("proof_of_payment_url"),
+  proofOfPaymentFilename: text("proof_of_payment_filename"),
+  
+  // Reference Payment fields
+  referenciaEntity: text("referencia_entity"),
+  referenciaNumber: text("referencia_number"),
+  
+  // Approval fields
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  expiresAt: timestamp("expires_at"),
+  
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paymentProofs = pgTable("payment_proofs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentId: varchar("payment_id").notNull(),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
 });
 
 // Workflow Automation System

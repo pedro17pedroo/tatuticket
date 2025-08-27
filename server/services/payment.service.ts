@@ -11,7 +11,7 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 export class PaymentService {
   private static planPricing = {
     freemium: { priceId: null, amount: 0 },
-    pro: { priceId: "price_pro_monthly", amount: 2900 }, // R$ 29.00 in cents
+    pro: { priceId: "price_pro_monthly", amount: 1450000 }, // Kz 14.500,00 in cents
     enterprise: { priceId: "price_enterprise", amount: 0 } // Custom pricing
   };
 

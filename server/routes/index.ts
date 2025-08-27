@@ -20,6 +20,7 @@ import docsRoutes from './docs.routes';
 import billingRoutes from './billing.routes';
 import apiDocsRoutes from './api-docs.routes';
 import customerRoutes from './customer.routes';
+import angolaPaymentRoutes from './angola-payment.routes';
 
 export const registerRoutes = (app: Express): Server => {
   // Apply request logging middleware only to API routes
@@ -46,6 +47,9 @@ export const registerRoutes = (app: Express): Server => {
   
   // Customer portal routes
   app.use('/api/customer', customerRoutes);
+  
+  // Angola payment routes
+  app.use('/api/angola-payments', angolaPaymentRoutes);
   
   // API Documentation
   app.use('/api/docs', docsRoutes);

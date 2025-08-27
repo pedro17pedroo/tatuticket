@@ -43,10 +43,10 @@ const testimonials = [
     role: "Head of Support",
     company: "ScaleUp Inc",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=facearea&facepad=2&w=256&h=256",
-    quote: "A segurança e conformidade com LGPD foram decisivas. O isolamento multi-tenant é perfeito para nossa operação B2B. Recomendo para qualquer empresa séria.",
+    quote: "A segurança e conformidade com a Lei de Proteção de Dados de Angola foram decisivas. O isolamento multi-tenant é perfeito para nossa operação B2B. Recomendo para qualquer empresa séria.",
     rating: 5,
     metrics: {
-      improvement: "100% LGPD",
+      improvement: "100% Conforme",
       satisfaction: "Máxima segurança"
     }
   },

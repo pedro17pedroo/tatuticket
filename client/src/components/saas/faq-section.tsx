@@ -11,7 +11,7 @@ const faqData = [
   },
   {
     question: "Quais são os planos disponíveis?",
-    answer: "Oferecemos 3 planos: Freemium (gratuito até 50 tickets/mês), Pro (R$ 29/agente/mês) e Enterprise (personalizado). Cada plano inclui funcionalidades específicas para diferentes necessidades empresariais."
+    answer: "Oferecemos 3 planos: Freemium (gratuito até 50 tickets/mês), Pro (Kz 14.500/agente/mês) e Enterprise (personalizado). Cada plano inclui funcionalidades específicas para diferentes necessidades empresariais."
   },
   {
     question: "O TatuTicket funciona offline?",
@@ -23,7 +23,7 @@ const faqData = [
   },
   {
     question: "O sistema é seguro?",
-    answer: "Absolutamente. Utilizamos criptografia AES-256, isolamento multi-tenant completo e somos totalmente compatíveis com LGPD e GDPR. Seus dados estão protegidos com os mais altos padrões de segurança."
+    answer: "Absolutamente. Utilizamos criptografia AES-256, isolamento multi-tenant completo e somos totalmente compatíveis com a Lei de Proteção de Dados de Angola. Seus dados estão protegidos com os mais altos padrões de segurança."
   },
   {
     question: "Posso integrar com outros sistemas?",

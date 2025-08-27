@@ -18,27 +18,27 @@ interface BillingRule {
   type: 'sla_hours' | 'tickets' | 'storage' | 'api_calls';
   limit: number;
   costPerUnit: number;
-  currency: 'BRL' | 'USD';
+  currency: 'AOA' | 'USD';
 }
 
 export class BillingAutomationService {
   private billingRules: Record<string, BillingRule[]> = {
     'freemium': [
-      { type: 'tickets', limit: 50, costPerUnit: 2.00, currency: 'BRL' },
-      { type: 'sla_hours', limit: 20, costPerUnit: 8.00, currency: 'BRL' },
-      { type: 'storage', limit: 1000, costPerUnit: 0.10, currency: 'BRL' }
+      { type: 'tickets', limit: 50, costPerUnit: 1000.00, currency: 'AOA' },
+      { type: 'sla_hours', limit: 20, costPerUnit: 4000.00, currency: 'AOA' },
+      { type: 'storage', limit: 1000, costPerUnit: 50.00, currency: 'AOA' }
     ],
     'pro': [
-      { type: 'tickets', limit: 500, costPerUnit: 1.50, currency: 'BRL' },
-      { type: 'sla_hours', limit: 80, costPerUnit: 6.50, currency: 'BRL' },
-      { type: 'storage', limit: 5000, costPerUnit: 0.08, currency: 'BRL' },
-      { type: 'api_calls', limit: 10000, costPerUnit: 0.01, currency: 'BRL' }
+      { type: 'tickets', limit: 500, costPerUnit: 750.00, currency: 'AOA' },
+      { type: 'sla_hours', limit: 80, costPerUnit: 3250.00, currency: 'AOA' },
+      { type: 'storage', limit: 5000, costPerUnit: 40.00, currency: 'AOA' },
+      { type: 'api_calls', limit: 10000, costPerUnit: 5.00, currency: 'AOA' }
     ],
     'enterprise': [
-      { type: 'tickets', limit: 2000, costPerUnit: 1.00, currency: 'BRL' },
-      { type: 'sla_hours', limit: 200, costPerUnit: 5.00, currency: 'BRL' },
-      { type: 'storage', limit: 20000, costPerUnit: 0.05, currency: 'BRL' },
-      { type: 'api_calls', limit: 50000, costPerUnit: 0.005, currency: 'BRL' }
+      { type: 'tickets', limit: 2000, costPerUnit: 500.00, currency: 'AOA' },
+      { type: 'sla_hours', limit: 200, costPerUnit: 2500.00, currency: 'AOA' },
+      { type: 'storage', limit: 20000, costPerUnit: 25.00, currency: 'AOA' },
+      { type: 'api_calls', limit: 50000, costPerUnit: 2.50, currency: 'AOA' }
     ]
   };
 
@@ -167,7 +167,7 @@ export class BillingAutomationService {
 
       const totalOverageAmount = overageCharges.reduce((sum, charge) => sum + charge.totalCost, 0);
       
-      console.log(`💳 Processing ${overageCharges.length} overage charges for ${tenant.name} (Total: R$ ${totalOverageAmount.toFixed(2)})`);
+      console.log(`💳 Processing ${overageCharges.length} overage charges for ${tenant.name} (Total: Kz ${totalOverageAmount.toFixed(2)})`);
 
       // Create invoice items in Stripe (if configured)
       if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_mock') {
@@ -213,7 +213,7 @@ export class BillingAutomationService {
         await stripe.invoiceItems.create({
           customer: tenant.stripeCustomerId,
           amount: Math.round(charge.totalCost * 100), // Convert to cents
-          currency: 'brl',
+          currency: 'aoa',
           description: charge.description,
           metadata: {
             tenant_id: tenant.id,
@@ -251,7 +251,7 @@ export class BillingAutomationService {
           to: admin.email,
           subject: `💳 Cobrança por Excesso de Uso - ${tenant.name}`,
           html: emailContent,
-          text: `Você possui cobranças de excesso de uso no valor de R$ ${totalAmount.toFixed(2)}.`
+          text: `Você possui cobranças de excesso de uso no valor de Kz ${totalAmount.toFixed(2)}.`
         });
       }
 
@@ -267,7 +267,7 @@ export class BillingAutomationService {
    */
   private generateBillingEmailContent(tenant: any, overageCharges: any[], totalAmount: number): string {
     const chargesHtml = overageCharges.map(charge => 
-      `<li><strong>${this.getOverageTypeLabel(charge.type)}:</strong> ${charge.overageAmount} unidades excedentes × R$ ${charge.costPerUnit} = <strong>R$ ${charge.totalCost.toFixed(2)}</strong></li>`
+      `<li><strong>${this.getOverageTypeLabel(charge.type)}:</strong> ${charge.overageAmount} unidades excedentes × Kz ${charge.costPerUnit} = <strong>Kz ${charge.totalCost.toFixed(2)}</strong></li>`
     ).join('');
 
     return `
@@ -284,7 +284,7 @@ export class BillingAutomationService {
         </ul>
         
         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0; color: #1f2937;">Total a Pagar: <span style="color: #dc2626;">R$ ${totalAmount.toFixed(2)}</span></h3>
+          <h3 style="margin: 0; color: #1f2937;">Total a Pagar: <span style="color: #dc2626;">Kz ${totalAmount.toFixed(2)}</span></h3>
         </div>
         
         <p>Esta cobrança será adicionada à sua próxima fatura mensal. Para visualizar detalhes completos, acesse o portal do cliente.</p>
@@ -310,7 +310,7 @@ export class BillingAutomationService {
       'api_calls': 'chamadas API excedentes'
     };
     
-    return `${amount} ${typeLabels[type as keyof typeof typeLabels] || type} × R$ ${costPerUnit.toFixed(2)}`;
+    return `${amount} ${typeLabels[type as keyof typeof typeLabels] || type} × Kz ${costPerUnit.toFixed(2)}`;
   }
 
   /**

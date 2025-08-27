@@ -408,7 +408,7 @@ router.post('/create-usage-billing',
       // Create usage billing item with Stripe
       const usageItem = {
         customer: customerId,
-        currency: 'brl',
+        currency: 'aoa',
         amount: Math.round(quantity * unitPrice * 100), // Convert to cents
         description,
         metadata: {

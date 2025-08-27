@@ -85,7 +85,7 @@ const PRICING_PLANS: PricingPlan[] = [
       'Automações avançadas',
       'API completa + Webhooks',
       'SSO e SAML',
-      'Conformidade LGPD/GDPR',
+      'Conformidade Lei de Proteção de Dados Angola',
       'Suporte 24/7',
       'Gerente de conta dedicado',
       'Onboarding personalizado',

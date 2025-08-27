@@ -37,7 +37,7 @@ const features = [
   {
     icon: "fa-shield-alt",
     title: "Segurança Máxima",
-    description: "Isolamento multi-tenant, criptografia AES-256 e conformidade total com LGPD/GDPR.",
+    description: "Isolamento multi-tenant, criptografia AES-256 e conformidade total com Lei de Proteção de Dados de Angola.",
     color: "bg-purple-500"
   },
   {
@@ -58,7 +58,7 @@ const pricingPlans: PricingPlan[] = [
   {
     id: "freemium",
     name: "Freemium",
-    price: "R$ 0",
+    price: "Kz 0",
     description: "por mês • até 50 tickets",
     features: [
       "Até 3 agentes",
@@ -72,7 +72,7 @@ const pricingPlans: PricingPlan[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "R$ 29",
+    price: "Kz 14.500",
     description: "por agente/mês • tickets ilimitados",
     features: [
       "Agentes ilimitados",
