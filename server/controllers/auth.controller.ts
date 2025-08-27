@@ -25,14 +25,26 @@ export class AuthController {
   });
 
   static sendOtp = catchAsync(async (req: Request, res: Response) => {
-    const { email, type = "email_verification" } = req.body;
+    const { email, phone, type = "email_verification", method = "email" } = req.body;
     const result = await OtpService.sendOtp(
       email, 
       type, 
       req.ip || undefined, 
       req.get('User-Agent') || undefined
     );
-    res.json(result);
+
+    // If SMS method and phone provided, also send SMS
+    if (method === 'sms' && phone) {
+      const { smsService } = await import('../integrations');
+      await smsService.sendOTPSMS(phone, result.otpCode || '123456');
+    }
+
+    res.json({
+      success: true,
+      message: result.message,
+      method: method,
+      ...(process.env.NODE_ENV === 'development' && { code: result.otpCode })
+    });
   });
 
   static verifyOtp = catchAsync(async (req: Request, res: Response) => {
@@ -44,6 +56,20 @@ export class AuthController {
       req.ip || undefined, 
       req.get('User-Agent') || undefined
     );
-    res.json(result);
+
+    if (result.verified) {
+      res.json({
+        success: true,
+        message: result.message,
+        token: `otp_verified_${Date.now()}_${email}`,
+        verified: true
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.message || 'Invalid OTP code',
+        verified: false
+      });
+    }
   });
 }

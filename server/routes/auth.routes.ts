@@ -16,14 +16,17 @@ router.post('/login', validateBody(z.object({
 
 router.get('/demo-credentials', AuthController.getDemoCredentials);
 
-// OTP routes
+// OTP routes with SMS support
 router.post('/send-otp', validateBody(z.object({
   email: z.string().email(),
-  type: z.string().optional().default('email_verification')
+  phone: z.string().optional(),
+  type: z.string().optional().default('email_verification'),
+  method: z.enum(['email', 'sms']).optional().default('email')
 })), AuthController.sendOtp);
 
 router.post('/verify-otp', validateBody(z.object({
   email: z.string().email(),
+  phone: z.string().optional(),
   code: z.string().length(6),
   type: z.string().optional().default('email_verification')
 })), AuthController.verifyOtp);
