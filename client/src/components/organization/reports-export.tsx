@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -101,9 +101,14 @@ export function ReportsExport() {
     schedule: null as any
   });
 
-  const [exportParams, setExportParams] = useState({
+  const [exportParams, setExportParams] = useState<{
+    templateId: string;
+    format: 'pdf' | 'excel' | 'csv';
+    dateRange: { start: Date; end: Date };
+    customFilters: any;
+  }>({
     templateId: '',
-    format: 'pdf' as const,
+    format: 'pdf',
     dateRange: {
       start: new Date(new Date().setDate(new Date().getDate() - 30)),
       end: new Date()
@@ -111,7 +116,7 @@ export function ReportsExport() {
     customFilters: {}
   });
 
-  useState(() => {
+  React.useEffect(() => {
     loadTemplates();
     loadExports();
   }, []);

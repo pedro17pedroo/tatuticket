@@ -66,8 +66,8 @@ export class OtpService {
         resourceType: "otp",
         resourceId: null,
         metadata: { email, type, reason: "invalid_or_expired" },
-        ipAddress,
-        userAgent,
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
       });
       
       throw new AppError('Invalid or expired OTP code', 400);
