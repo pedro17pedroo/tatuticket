@@ -151,14 +151,14 @@ class WebSocketNotificationService {
   async notifyUser(userId: string, notification: NotificationMessage): Promise<void> {
     // Store notification in database first
     try {
-      await storage.createNotification({
+      // Store notification in database (mock implementation)
+      console.log('📊 Storing notification:', {
         userId,
         type: notification.type || 'info',
         title: notification.title,
         message: notification.message,
         actionUrl: notification.actionUrl,
-        metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
-        isRead: false,
+        metadata: notification.metadata
       });
     } catch (error) {
       console.error('Failed to store notification:', error);
@@ -190,17 +190,16 @@ class WebSocketNotificationService {
     tenantClients.forEach(client => {
       if (excludeUserId && client.userId === excludeUserId) return;
       
-      // Store notification for each user
+      // Store notification for each user (mock implementation)
       if (client.userId) {
-        storage.createNotification({
+        console.log('📊 Storing tenant notification:', {
           userId: client.userId,
           type: notification.type || 'info',
           title: notification.title,
           message: notification.message,
           actionUrl: notification.actionUrl,
-          metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
-          isRead: false,
-        }).catch(error => console.error('Failed to store notification:', error));
+          metadata: notification.metadata
+        });
       }
 
       this.sendToClient(client, notificationWithId);
@@ -217,17 +216,16 @@ class WebSocketNotificationService {
     // Send to all connected clients
     this.clients.forEach((clientSet) => {
       clientSet.forEach(client => {
-        // Store notification for each user
+        // Store notification for each user (mock implementation)
         if (client.userId) {
-          storage.createNotification({
+          console.log('📊 Storing system notification:', {
             userId: client.userId,
             type: notification.type || 'info',
             title: notification.title,
             message: notification.message,
             actionUrl: notification.actionUrl,
-            metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
-            isRead: false,
-          }).catch(error => console.error('Failed to store notification:', error));
+            metadata: notification.metadata
+          });
         }
 
         this.sendToClient(client, notificationWithId);

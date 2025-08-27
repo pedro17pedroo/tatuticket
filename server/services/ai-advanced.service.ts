@@ -59,7 +59,8 @@ class AIAdvancedService {
       }
 
       // Real OpenAI implementation
-      const analysis = await this.performRealTicketAnalysis(content, context);
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const analysis = await this.performRealTicketAnalysis(openai, content, context);
       return analysis;
     } catch (error) {
       console.error('❌ AI ticket analysis failed:', error);
@@ -571,6 +572,46 @@ class AIAdvancedService {
         requiresHumanReview: true
       };
     }
+  }
+
+  private async performRealTicketAnalysis(openai: OpenAI, content: string, context: any): Promise<TicketAnalysis> {
+    try {
+      // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+      const response = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages: [
+          {
+            role: "system",
+            content: "You are an AI assistant specialized in analyzing customer support tickets. Analyze the sentiment, urgency, category, and provide actionable insights. Return JSON format only."
+          },
+          {
+            role: "user",
+            content: `Analyze this support ticket: ${content}\n\nContext: ${JSON.stringify(context)}`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 1000
+      });
+
+      const aiResponse = JSON.parse(response.choices[0].message.content!);
+      
+      return {
+        sentiment: aiResponse.sentiment || 'neutral',
+        urgency: aiResponse.urgency || 50,
+        category: aiResponse.category || 'general',
+        suggestedActions: aiResponse.suggestedActions || ['Standard response'],
+        duplicateTickets: aiResponse.duplicateTickets || [],
+        estimatedResolutionTime: aiResponse.estimatedResolutionTime || 24,
+        requiredExpertise: aiResponse.requiredExpertise || ['general']
+      };
+    } catch (error) {
+      console.error('❌ OpenAI analysis failed:', error);
+      throw error;
+    }
+  }
+
+  isEnabled(): boolean {
+    return this.openaiEnabled;
   }
 }
 

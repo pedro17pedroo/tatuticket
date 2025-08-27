@@ -306,11 +306,74 @@ async function handleBackgroundSync() {
 
 async function getOfflineActions() {
   // Retorna ações offline armazenadas
-  return [];
+  try {
+    const db = await openOfflineDB();
+    const transaction = db.transaction(['offlineActions'], 'readonly');
+    const store = transaction.objectStore('offlineActions');
+    const request = store.getAll();
+    
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('TatuTicket: Error getting offline actions:', error);
+    return [];
+  }
 }
 
 async function removeOfflineAction(actionId) {
   // Remove ação do armazenamento offline
-  console.log('TatuTicket: Removing offline action:', actionId);
+  try {
+    const db = await openOfflineDB();
+    const transaction = db.transaction(['offlineActions'], 'readwrite');
+    const store = transaction.objectStore('offlineActions');
+    store.delete(actionId);
+    
+    console.log('TatuTicket: Removing offline action:', actionId);
+    return true;
+  } catch (error) {
+    console.error('TatuTicket: Error removing offline action:', error);
+    return false;
+  }
+}
+
+async function storeOfflineAction(action) {
+  // Armazena ação para execução quando voltar online
+  try {
+    const db = await openOfflineDB();
+    const transaction = db.transaction(['offlineActions'], 'readwrite');
+    const store = transaction.objectStore('offlineActions');
+    
+    const actionWithId = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      ...action
+    };
+    
+    store.add(actionWithId);
+    console.log('TatuTicket: Stored offline action:', actionWithId);
+    return actionWithId.id;
+  } catch (error) {
+    console.error('TatuTicket: Error storing offline action:', error);
+    return null;
+  }
+}
+
+async function openOfflineDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('TatuTicketOffline', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('offlineActions')) {
+        const store = db.createObjectStore('offlineActions', { keyPath: 'id' });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+  });
 }
 

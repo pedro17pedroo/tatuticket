@@ -1,6 +1,7 @@
 import { storage } from '../storage';
 import { InsertUser, type User } from '@shared/schema';
 import { AppError } from '../middlewares/error.middleware';
+import crypto from 'crypto';
 
 export class UserService {
   static async getUsers(tenantId: string, role?: string): Promise<Omit<User, 'password'>[]> {
@@ -26,6 +27,11 @@ export class UserService {
   }
 
   static async createUser(userData: InsertUser, ipAddress?: string, userAgent?: string): Promise<Omit<User, 'password'>> {
+    // Hash password before storing
+    if (userData.password) {
+      userData.password = await this.hashPassword(userData.password);
+    }
+    
     const user = await storage.createUser(userData);
     
     // Don't return password in response
@@ -60,6 +66,9 @@ export class UserService {
     // If password is empty, remove it from updates
     if (updates.password === "") {
       delete updates.password;
+    } else if (updates.password) {
+      // Hash new password
+      updates.password = await this.hashPassword(updates.password);
     }
     
     const user = await storage.updateUser(id, updates);
@@ -79,5 +88,29 @@ export class UserService {
     });
     
     return userResponse;
+  }
+
+  private static async hashPassword(password: string): Promise<string> {
+    // Generate salt
+    const salt = crypto.randomBytes(16).toString('hex');
+    
+    // Hash password with salt using pbkdf2
+    return new Promise((resolve, reject) => {
+      crypto.pbkdf2(password, salt, 100000, 64, 'sha512', (err, derivedKey) => {
+        if (err) reject(err);
+        resolve(salt + ':' + derivedKey.toString('hex'));
+      });
+    });
+  }
+
+  static async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+    const [salt, hash] = hashedPassword.split(':');
+    
+    return new Promise((resolve, reject) => {
+      crypto.pbkdf2(password, salt, 100000, 64, 'sha512', (err, derivedKey) => {
+        if (err) reject(err);
+        resolve(hash === derivedKey.toString('hex'));
+      });
+    });
   }
 }

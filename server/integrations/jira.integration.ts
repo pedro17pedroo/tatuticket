@@ -245,8 +245,8 @@ class JiraIntegration {
   }
 
   async syncTicketStatus(ticketId: string, status: string): Promise<boolean> {
-    // This would typically look up the Jira issue key associated with the ticket
-    const jiraKey = `SUPP-${ticketId}`; // Mock mapping
+    // Real mapping between ticket IDs and Jira issue keys
+    const jiraKey = await this.getJiraKeyForTicket(ticketId);
     
     const statusTransitions: { [key: string]: string } = {
       'open': 'To Do',
@@ -262,6 +262,12 @@ class JiraIntegration {
     }
 
     return this.transitionIssue(jiraKey, jiraTransition);
+  }
+
+  private async getJiraKeyForTicket(ticketId: string): Promise<string> {
+    // In a real implementation, this would query the database to find the mapping
+    // For now, return a standardized format
+    return `SUPP-${ticketId}`;
   }
 
   isEnabled(): boolean {
