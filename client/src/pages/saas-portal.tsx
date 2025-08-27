@@ -1,15 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { authService, type RegisterData } from "@/lib/auth";
 import { FAQSection } from "@/components/saas/faq-section";
-import { OnboardingWizard } from "@/components/saas/onboarding-wizard";
-import { EnhancedOnboardingFlow, SystemCompletionStatus } from "@/components/portal-completion";
 import { AICustomerChatbot } from '@/components/saas/AICustomerChatbot';
 import { TestimonialsSection } from "@/components/saas/testimonials-section";
 import { PricingPlans } from "@/components/saas/pricing-plans";
@@ -103,41 +96,8 @@ const pricingPlans: PricingPlan[] = [
 ];
 
 export function SaasPortal() {
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"freemium" | "pro" | "enterprise">("freemium");
-  const [isLoading, setIsLoading] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const { toast } = useToast();
-
-  const [registerForm, setRegisterForm] = useState<RegisterData>({
-    username: "",
-    email: "",
-    password: "",
-    role: "user"
-  });
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      await authService.register(registerForm);
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Verifique seu email para ativar sua conta.",
-      });
-      setIsOnboardingOpen(false);
-      setRegisterForm({ username: "", email: "", password: "", role: "user" });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao criar conta",
-        description: error.message || "Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div>
@@ -156,10 +116,7 @@ export function SaasPortal() {
                 <Button 
                   size="lg"
                   className="bg-white text-primary hover:bg-gray-100"
-                  onClick={() => {
-                    setSelectedPlan("pro");
-                    setIsOnboardingOpen(true);
-                  }}
+                  onClick={() => window.location.href = '/register'}
                   data-testid="button-free-trial"
                 >
                   Teste Grátis 14 Dias
@@ -231,10 +188,7 @@ export function SaasPortal() {
             <Button 
               size="lg"
               className="bg-white text-primary hover:bg-gray-100"
-              onClick={() => {
-                setSelectedPlan("freemium");
-                setIsOnboardingOpen(true);
-              }}
+              onClick={() => window.location.href = '/register'}
               data-testid="button-create-account"
             >
               Criar Conta Grátis
@@ -257,16 +211,6 @@ export function SaasPortal() {
       {/* FAQ Section */}
       <FAQSection />
 
-      {/* Onboarding Wizard */}
-      <OnboardingWizard
-        isOpen={isOnboardingOpen}
-        onClose={() => setIsOnboardingOpen(false)}
-        initialPlan={selectedPlan}
-        onComplete={(data) => {
-          console.log('Onboarding completed:', data);
-          setIsOnboardingOpen(false);
-        }}
-      />
 
       {/* AI Customer Chatbot */}
       <AICustomerChatbot

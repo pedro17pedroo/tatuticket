@@ -13,6 +13,7 @@ import { SaasPortal } from "@/pages/saas-portal";
 import { OrganizationPortal } from "@/pages/organization-portal";
 import { CustomerPortal } from "@/pages/customer-portal";
 import { AdminPortal } from "@/pages/admin-portal";
+import { RegisterPage } from "@/pages/register";
 import NotFound from "@/pages/not-found";
 import { authService } from "@/lib/auth";
 import { usePWA } from "@/hooks/use-pwa";
@@ -74,6 +75,7 @@ function Router() {
       
       <Switch>
         <Route path="/" component={SaasPortal} />
+        <Route path="/register" component={RegisterPage} />
         
         {/* Organization Portal Routes */}
         <Route path="/organization/login">
