@@ -58,12 +58,54 @@ class AIAdvancedService {
         return this.mockTicketAnalysis(ticketId, content);
       }
 
-      // Real OpenAI implementation would go here
+      // Real OpenAI implementation
       const analysis = await this.performRealTicketAnalysis(content, context);
       return analysis;
     } catch (error) {
       console.error('❌ AI ticket analysis failed:', error);
       return this.mockTicketAnalysis(ticketId, content);
+    }
+  }
+
+  async predictSLABreach(ticketId: string, priority: string, complexity: string, teamLoad: number): Promise<SLAPrediction> {
+    try {
+      if (!this.openaiEnabled) {
+        return this.mockSLAPrediction(ticketId, priority, complexity, teamLoad);
+      }
+
+      // Real OpenAI-based SLA prediction
+      return await this.performRealSLAPrediction(ticketId, priority, complexity, teamLoad);
+    } catch (error) {
+      console.error('❌ AI SLA prediction failed:', error);
+      return this.mockSLAPrediction(ticketId, priority, complexity, teamLoad);
+    }
+  }
+
+  async getCustomerInsights(customerId: string): Promise<CustomerInsight> {
+    try {
+      if (!this.openaiEnabled) {
+        return this.mockCustomerInsights(customerId);
+      }
+
+      // Real customer insights analysis
+      return await this.performRealCustomerInsights(customerId);
+    } catch (error) {
+      console.error('❌ AI customer insights failed:', error);
+      return this.mockCustomerInsights(customerId);
+    }
+  }
+
+  async suggestKnowledgeBaseArticles(ticketContent: string, category?: string): Promise<KnowledgeBaseSuggestion[]> {
+    try {
+      if (!this.openaiEnabled) {
+        return this.mockKnowledgeBaseSuggestions(ticketContent, category);
+      }
+
+      // Real knowledge base suggestions
+      return await this.performRealKnowledgeBaseSuggestions(ticketContent, category);
+    } catch (error) {
+      console.error('❌ AI KB suggestions failed:', error);
+      return this.mockKnowledgeBaseSuggestions(ticketContent, category);
     }
   }
 

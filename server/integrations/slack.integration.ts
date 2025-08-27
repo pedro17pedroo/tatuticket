@@ -71,10 +71,70 @@ class SlackIntegration {
       critical: '🔴'
     };
 
+    const blocks = [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: `🎫 Novo Ticket: ${notification.title}`
+        }
+      },
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `*ID:* ${notification.ticketId}`
+          },
+          {
+            type: 'mrkdwn',
+            text: `*Prioridade:* ${priorityEmoji[notification.priority as keyof typeof priorityEmoji] || '⚪'} ${notification.priority}`
+          },
+          {
+            type: 'mrkdwn',
+            text: `*Responsável:* ${notification.assignee || 'Não atribuído'}`
+          },
+          {
+            type: 'mrkdwn',
+            text: `*Canal:* ${notification.channel}`
+          }
+        ]
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Descrição:*\n${notification.description}`
+        }
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Ver Ticket'
+            },
+            url: `${process.env.APP_URL}/organization/tickets/${notification.ticketId}`,
+            style: 'primary'
+          },
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Atribuir a mim'
+            },
+            action_id: `assign_ticket_${notification.ticketId}`
+          }
+        ]
+      }
+    ];
+
     const message: SlackMessage = {
       channel: notification.channel,
-      text: `New ticket: ${notification.title}`,
-      blocks: [
+      text: `Novo ticket ${notification.ticketId}: ${notification.title}`,
+      blocks: blocks,
         {
           type: 'header',
           text: {

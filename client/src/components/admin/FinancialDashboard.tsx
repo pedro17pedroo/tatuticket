@@ -46,8 +46,30 @@ export function FinancialDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
   const [selectedMetric, setSelectedMetric] = useState('revenue');
 
-  // Mock financial data
-  const revenueMetrics: RevenueMetrics = {
+  // Fetch financial metrics from API
+  const { data: revenueMetrics, isLoading: isLoadingMetrics } = useQuery<RevenueMetrics>({
+    queryKey: ['/api/admin/financial-metrics', selectedPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/financial-metrics?period=${selectedPeriod}`);
+      if (!response.ok) throw new Error('Falha ao carregar métricas financeiras');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  // Fetch tenants financial data from API
+  const { data: tenantsData, isLoading: isLoadingTenants } = useQuery<TenantFinancial[]>({
+    queryKey: ['/api/admin/tenants-financial', selectedPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/tenants-financial?period=${selectedPeriod}`);
+      if (!response.ok) throw new Error('Falha ao carregar dados dos tenants');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  // Mock fallback data
+  const fallbackRevenueMetrics: RevenueMetrics = {
     totalRevenue: 284500,
     monthlyRecurring: 45600,
     growth: 12.5,
@@ -56,7 +78,7 @@ export function FinancialDashboard() {
     lifetimeValue: 2850
   };
 
-  const tenantsData: TenantFinancial[] = [
+  const fallbackTenantsData: TenantFinancial[] = [
     {
       id: '1',
       name: 'TechCorp Solutions',
@@ -92,15 +114,11 @@ export function FinancialDashboard() {
     }
   ];
 
-  const { data: revenue = revenueMetrics } = useQuery<RevenueMetrics>({
-    queryKey: ['/api/admin/revenue-metrics', selectedPeriod],
-    enabled: true
-  });
+  const finalRevenueMetrics = revenueMetrics || fallbackRevenueMetrics;
+  const finalTenantsData = tenantsData || fallbackTenantsData;
 
-  const { data: tenants = tenantsData } = useQuery<TenantFinancial[]>({
-    queryKey: ['/api/admin/tenant-financials'],
-    enabled: true
-  });
+  const displayRevenueMetrics = finalRevenueMetrics;
+  const displayTenantsData = finalTenantsData;
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -133,13 +151,13 @@ export function FinancialDashboard() {
     return Math.min((used / limit) * 100, 100);
   };
 
-  const totalCurrentRevenue = tenants
-    .filter(t => t.paymentStatus === 'current')
-    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
+  const totalCurrentRevenue = displayTenantsData
+    .filter(t => t.status === 'active')
+    .reduce((sum, t) => sum + t.mrr, 0);
 
-  const overdueRevenue = tenants
-    .filter(t => t.paymentStatus === 'overdue')
-    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
+  const overdueRevenue = displayTenantsData
+    .filter(t => t.status === 'past_due')
+    .reduce((sum, t) => sum + t.mrr, 0);
 
   return (
     <div className="space-y-6" data-testid="financial-dashboard">

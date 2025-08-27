@@ -340,7 +340,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // Get workflow by ID
-router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const workflow = MOCK_WORKFLOWS.find(w => w.id === id);
@@ -366,7 +366,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // Create new workflow
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { name, description, trigger, actions, isActive, priority } = req.body;
 
@@ -408,7 +408,7 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // Update workflow
-router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description, trigger, actions, isActive, priority } = req.body;
@@ -448,7 +448,7 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // Delete workflow
-router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const workflowIndex = MOCK_WORKFLOWS.findIndex(w => w.id === id);
@@ -867,5 +867,113 @@ router.post('/validate', authenticateToken, validateBody(createWorkflowSchema), 
     });
   }
 }));
+
+/**
+ * @swagger
+ * /api/workflows/templates:
+ *   get:
+ *     summary: Get workflow templates
+ *     description: Retrieve predefined workflow templates
+ *     tags: [Workflows]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of workflow templates
+ */
+router.get('/templates',
+  authenticateToken,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const templates = [
+      {
+        id: 'auto_assign_critical',
+        name: 'Auto-assign Critical Tickets',
+        description: 'Automatically assign critical priority tickets to senior agents',
+        category: 'escalation',
+        trigger: {
+          type: 'ticket_created',
+          conditions: [
+            { field: 'priority', operator: 'equals', value: 'critical' }
+          ]
+        },
+        actions: [
+          { type: 'assign_agent', params: { criteria: 'senior_available' } },
+          { type: 'send_notification', params: { channel: 'slack', template: 'critical_ticket' } }
+        ]
+      },
+      {
+        id: 'sla_warning',
+        name: 'SLA Breach Warning',
+        description: 'Send warnings when tickets are approaching SLA breach',
+        category: 'sla_management',
+        trigger: {
+          type: 'sla_warning',
+          conditions: [
+            { field: 'time_to_breach', operator: 'less_than', value: '2_hours' }
+          ]
+        },
+        actions: [
+          { type: 'escalate_ticket', params: { level: 'manager' } },
+          { type: 'send_notification', params: { channel: 'email', template: 'sla_warning' } }
+        ]
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: templates
+    });
+  })
+);
+
+/**
+ * @swagger
+ * /api/workflows/executions:
+ *   get:
+ *     summary: Get workflow execution history
+ *     description: Retrieve workflow execution history with performance metrics
+ *     tags: [Workflows]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Workflow execution history
+ */
+router.get('/executions',
+  authenticateToken,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const executions = [
+      {
+        id: 'exec_001',
+        workflowId: 'auto_assign_critical',
+        workflowName: 'Auto-assign Critical Tickets',
+        triggeredAt: '2025-01-27T14:30:00Z',
+        status: 'success',
+        resourceType: 'ticket',
+        resourceId: 'TICK-1001',
+        executionTime: 1.2,
+        actionsCompleted: 2,
+        actionsTotal: 2
+      },
+      {
+        id: 'exec_002',
+        workflowId: 'sla_warning',
+        workflowName: 'SLA Breach Warning',
+        triggeredAt: '2025-01-27T13:45:00Z',
+        status: 'success',
+        resourceType: 'ticket',
+        resourceId: 'TICK-0998',
+        executionTime: 0.8,
+        actionsCompleted: 2,
+        actionsTotal: 2
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: executions
+    });
+  })
+);
 
 export default router;

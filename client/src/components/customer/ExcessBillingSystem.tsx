@@ -48,8 +48,69 @@ export function ExcessBillingSystem() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const queryClient = useQueryClient();
 
-  // Mock data - In real app, this would come from API
-  const slaUsageData: SLAUsage[] = [
+  // Fetch SLA usage data from API
+  const { data: slaUsageData, isLoading: isLoadingUsage } = useQuery<SLAUsage[]>({
+    queryKey: ['/api/billing/sla-usage', selectedPeriod],
+    queryFn: async () => {
+      const response = await fetch(`/api/billing/sla-usage?period=${selectedPeriod}`);
+      if (!response.ok) throw new Error('Falha ao carregar dados de uso');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  // Fetch invoices data from API
+  const { data: invoicesData, isLoading: isLoadingInvoices } = useQuery<Invoice[]>({
+    queryKey: ['/api/billing/invoices'],
+    queryFn: async () => {
+      const response = await fetch('/api/billing/invoices');
+      if (!response.ok) throw new Error('Falha ao carregar faturas');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  // Fetch payment methods from API
+  const { data: paymentMethodsData, isLoading: isLoadingPaymentMethods } = useQuery<PaymentMethod[]>({
+    queryKey: ['/api/billing/payment-methods'],
+    queryFn: async () => {
+      const response = await fetch('/api/billing/payment-methods');
+      if (!response.ok) throw new Error('Falha ao carregar métodos de pagamento');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  // Pay invoice mutation
+  const payInvoiceMutation = useMutation({
+    mutationFn: async ({ invoiceId, paymentMethodId }: { invoiceId: string, paymentMethodId: string }) => {
+      const response = await fetch('/api/billing/pay-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId, paymentMethodId })
+      });
+      if (!response.ok) throw new Error('Falha ao processar pagamento');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/invoices'] });
+      setShowPaymentDialog(false);
+      toast({
+        title: 'Pagamento processado',
+        description: 'Sua fatura foi paga com sucesso!',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro no pagamento',
+        description: error.message || 'Tente novamente mais tarde',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Mock fallback data if API fails
+  const fallbackSlaData: SLAUsage[] = [
     {
       id: '1',
       month: '2025-01',
@@ -82,7 +143,7 @@ export function ExcessBillingSystem() {
     }
   ];
 
-  const invoicesData: Invoice[] = [
+  const fallbackInvoicesData: Invoice[] = [
     {
       id: '1',
       invoiceNumber: 'INV-2025-001',
@@ -105,58 +166,21 @@ export function ExcessBillingSystem() {
     }
   ];
 
-  const paymentMethodsData: PaymentMethod[] = [
+  const finalSlaData = slaUsageData || fallbackSlaData;
+  const finalInvoicesData = invoicesData || fallbackInvoicesData;
+  const finalPaymentMethodsData = paymentMethodsData || [
     {
       id: '1',
-      type: 'card',
+      type: 'card' as const,
       last4: '4242',
       brand: 'Visa',
       isDefault: true
     }
   ];
 
-  const { data: slaUsage = slaUsageData } = useQuery<SLAUsage[]>({
-    queryKey: ['/api/billing/sla-usage', selectedPeriod],
-    enabled: true
-  });
-
-  const { data: invoices = invoicesData } = useQuery<Invoice[]>({
-    queryKey: ['/api/billing/invoices'],
-    enabled: true
-  });
-
-  const { data: paymentMethods = paymentMethodsData } = useQuery<PaymentMethod[]>({
-    queryKey: ['/api/billing/payment-methods'],
-    enabled: true
-  });
-
-  const payInvoiceMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      // In real app, this would call Stripe API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/billing/invoices'] });
-      setShowPaymentDialog(false);
-      setSelectedInvoice(null);
-      toast({
-        title: "Pagamento Processado",
-        description: "Sua fatura foi paga com sucesso",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro no Pagamento",
-        description: "Não foi possível processar o pagamento",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const currentMonth = slaUsage.find(usage => usage.month === '2025-01');
-  const totalExcessCost = slaUsage.reduce((sum, usage) => sum + usage.totalExcessCost, 0);
-  const pendingInvoices = invoices.filter(inv => inv.status === 'pending');
+  const currentMonth = finalSlaData.find(usage => usage.month === '2025-01');
+  const totalExcessCost = finalSlaData.reduce((sum, usage) => sum + usage.totalExcessCost, 0);
+  const pendingInvoices = finalInvoicesData.filter(inv => inv.status === 'pending');
 
   const getStatusColor = (status: string) => {
     switch (status) {

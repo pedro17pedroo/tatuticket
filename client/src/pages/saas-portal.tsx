@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authService, type RegisterData } from "@/lib/auth";
 import { FAQSection } from "@/components/saas/faq-section";
 import { OnboardingWizard } from "@/components/saas/onboarding-wizard";
+import { AICustomerChatbot } from '@/components/saas/AICustomerChatbot';
 import { TestimonialsSection } from "@/components/saas/testimonials-section";
 import { PricingPlans } from "@/components/saas/pricing-plans";
 import type { PricingPlan } from "@/types/portal";
@@ -104,6 +105,7 @@ export function SaasPortal() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"freemium" | "pro" | "enterprise">("freemium");
   const [isLoading, setIsLoading] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const { toast } = useToast();
 
   const [registerForm, setRegisterForm] = useState<RegisterData>({
@@ -259,6 +261,12 @@ export function SaasPortal() {
         isOpen={isOnboardingOpen}
         onClose={() => setIsOnboardingOpen(false)}
         initialPlan={selectedPlan}
+      />
+
+      {/* AI Customer Chatbot */}
+      <AICustomerChatbot
+        isOpen={isChatbotOpen}
+        onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
       />
     </div>
   );

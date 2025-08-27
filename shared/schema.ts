@@ -315,6 +315,110 @@ export type InsertApprovalWorkflow = z.infer<typeof insertApprovalWorkflowSchema
 export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
 
+// Advanced AI and Analytics Types
+export interface TicketAnalysis {
+  sentiment: 'positive' | 'neutral' | 'negative';
+  urgency: number;
+  category: string;
+  suggestedActions: string[];
+  duplicateTickets: string[];
+  estimatedResolutionTime: number;
+  requiredExpertise: string[];
+}
+
+export interface SLAPrediction {
+  ticketId: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  estimatedResolutionHours: number;
+  confidencePercentage: number;
+  timeToBreachHours: number;
+  riskFactors: string[];
+  recommendedActions: string[];
+}
+
+export interface CustomerInsight {
+  customerId: string;
+  satisfactionScore: number;
+  churnRisk: number;
+  preferredChannels: string[];
+  responseTimePreference: 'fast' | 'standard' | 'flexible';
+  complexityPreference: 'simple' | 'detailed';
+  historicalPatterns: {
+    commonIssues: string[];
+    averageResolutionTime: number;
+    escalationRate: number;
+  };
+}
+
+export interface KnowledgeBaseSuggestion {
+  id: string;
+  title: string;
+  relevanceScore: number;
+  summary: string;
+  category: string;
+  tags: string[];
+}
+
+// Financial Dashboard Types
+export interface RevenueMetrics {
+  totalRevenue: number;
+  monthlyRecurring: number;
+  growth: number;
+  churnRate: number;
+  averageRevenuePerUser: number;
+  lifetimeValue: number;
+  conversionRate?: number;
+  customerAcquisitionCost?: number;
+  netRevenue?: number;
+  grossMargin?: number;
+}
+
+export interface TenantFinancial {
+  id: string;
+  name: string;
+  plan: string;
+  mrr: number;
+  totalRevenue: number;
+  users: number;
+  tickets: number;
+  status: string;
+  joinDate: string;
+  lastPayment: string;
+  healthScore: number;
+}
+
+// Billing and Payment Types
+export interface SLAUsage {
+  id: string;
+  month: string;
+  plannedHours: number;
+  usedHours: number;
+  excessHours: number;
+  status: 'within_limit' | 'warning' | 'exceeded';
+  costPerExcessHour: number;
+  totalExcessCost: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  date: string;
+  dueDate: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'overdue';
+  description: string;
+  paymentMethod?: string;
+  paidAt?: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: 'card' | 'bank_transfer';
+  last4: string;
+  brand: string;
+  isDefault: boolean;
+}
+
 // Subscription and Payment Management
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -307,4 +307,121 @@ router.post('/retry-billing/:tenantId',
   })
 );
 
+/**
+ * @swagger
+ * /api/admin/financial-metrics:
+ *   get:
+ *     summary: Get financial metrics
+ *     description: Retrieve comprehensive financial metrics for admin dashboard
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [current_month, last_3_months, last_6_months, current_year]
+ *         description: Time period for financial data
+ *     responses:
+ *       200:
+ *         description: Financial metrics data
+ */
+router.get('/financial-metrics',
+  authenticateToken,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const { period = 'current_month' } = req.query;
+    
+    // Mock comprehensive financial metrics
+    const financialMetrics = {
+      totalRevenue: 284500,
+      monthlyRecurring: 45600,
+      growth: 12.5,
+      churnRate: 3.2,
+      averageRevenuePerUser: 89.50,
+      lifetimeValue: 2850,
+      conversionRate: 18.3,
+      customerAcquisitionCost: 65.00,
+      netRevenue: 256050,
+      grossMargin: 78.2
+    };
+
+    res.json({
+      success: true,
+      data: financialMetrics
+    });
+  })
+);
+
+/**
+ * @swagger
+ * /api/admin/tenants-financial:
+ *   get:
+ *     summary: Get tenants financial data
+ *     description: Retrieve financial data for all tenants
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *         description: Time period for data
+ *     responses:
+ *       200:
+ *         description: Tenants financial data
+ */
+router.get('/tenants-financial',
+  authenticateToken,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const tenantsFinancialData = [
+      {
+        id: '1',
+        name: 'Empresa Tech Solutions',
+        plan: 'Enterprise',
+        mrr: 249,
+        totalRevenue: 2988,
+        users: 45,
+        tickets: 1247,
+        status: 'active',
+        joinDate: '2024-01-15',
+        lastPayment: '2025-01-15',
+        healthScore: 92
+      },
+      {
+        id: '2',
+        name: 'StartupCorp',
+        plan: 'Professional',
+        mrr: 99,
+        totalRevenue: 792,
+        users: 12,
+        tickets: 345,
+        status: 'active',
+        joinDate: '2024-06-20',
+        lastPayment: '2025-01-20',
+        healthScore: 78
+      },
+      {
+        id: '3',
+        name: 'Digital Agency',
+        plan: 'Starter',
+        mrr: 29,
+        totalRevenue: 348,
+        users: 5,
+        tickets: 123,
+        status: 'active',
+        joinDate: '2024-11-01',
+        lastPayment: '2025-01-01',
+        healthScore: 85
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: tenantsFinancialData
+    });
+  })
+);
+
 export default router;

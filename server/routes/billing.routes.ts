@@ -9,7 +9,7 @@ import Stripe from 'stripe';
 const router = Router();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
-  apiVersion: '2024-10-28.acacia',
+  apiVersion: '2025-07-30.basil',
 });
 
 // Validation schemas
@@ -256,6 +256,108 @@ router.get('/payment-methods',
     res.json({
       success: true,
       data: paymentMethodsData
+    });
+  })
+);
+
+/**
+ * @swagger
+ * /api/billing/create-subscription:
+ *   post:
+ *     summary: Create Stripe subscription
+ *     description: Create a new Stripe subscription for onboarding
+ *     tags: [Billing]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               paymentMethodId:
+ *                 type: string
+ *               planId:
+ *                 type: string
+ *               billingPeriod:
+ *                 type: string
+ *                 enum: [monthly, yearly]
+ *               customerInfo:
+ *                 type: object
+ *                 properties:
+ *                   email:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   companyName:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Subscription created successfully
+ */
+router.post('/create-subscription',
+  validateBody(z.object({
+    paymentMethodId: z.string(),
+    planId: z.string(),
+    billingPeriod: z.enum(['monthly', 'yearly']),
+    customerInfo: z.object({
+      email: z.string().email(),
+      name: z.string(),
+      companyName: z.string()
+    })
+  })),
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const { paymentMethodId, planId, billingPeriod, customerInfo } = req.body;
+    
+    // Mock Stripe customer and subscription creation
+    const mockCustomerId = `cus_${Date.now()}`;
+    const mockSubscriptionId = `sub_${Date.now()}`;
+    
+    res.json({
+      success: true,
+      customerId: mockCustomerId,
+      subscriptionId: mockSubscriptionId,
+      status: 'active'
+    });
+  })
+);
+
+/**
+ * @swagger
+ * /api/billing/pay-invoice:
+ *   post:
+ *     summary: Pay excess billing invoice
+ *     description: Process payment for excess SLA usage invoice
+ *     tags: [Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               invoiceId:
+ *                 type: string
+ *               paymentMethodId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Payment processed successfully
+ */
+router.post('/pay-invoice',
+  authenticateToken,
+  validateBody(payExcessInvoiceSchema),
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const { invoiceId, paymentMethodId } = req.body;
+    
+    // Mock payment processing
+    console.log(`Processing payment for invoice ${invoiceId} with payment method ${paymentMethodId}`);
+    
+    res.json({
+      success: true,
+      paymentId: `pay_${Date.now()}`,
+      status: 'succeeded'
     });
   })
 );

@@ -238,12 +238,59 @@ export function OnboardingWizard() {
 
   const createTenantMutation = useMutation({
     mutationFn: async (data: any) => {
-      // API call to create tenant and subscription
-      const response = await fetch('/api/onboarding/complete', {
+      // Step 1: Create Stripe customer and subscription if payment method provided
+      let stripeSubscriptionId = null;
+      let stripeCustomerId = null;
+      
+      if (paymentInfo.paymentMethodId && paymentInfo.planId !== 'starter') {
+        const stripeResponse = await fetch('/api/billing/create-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentMethodId: paymentInfo.paymentMethodId,
+            planId: paymentInfo.planId,
+            billingPeriod: paymentInfo.billingPeriod,
+            customerInfo: {
+              email: userInfo.email,
+              name: `${userInfo.firstName} ${userInfo.lastName}`,
+              companyName: organizationInfo.companyName
+            }
+          }),
+        });
+
+        if (!stripeResponse.ok) {
+          throw new Error('Falha ao processar pagamento');
+        }
+
+        const stripeData = await stripeResponse.json();
+        stripeSubscriptionId = stripeData.subscriptionId;
+        stripeCustomerId = stripeData.customerId;
+      }
+
+      // Step 2: Create tenant and user account
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          email: userInfo.email,
+          password: 'temp_password_123',
+          firstName: userInfo.firstName,
+          lastName: userInfo.lastName,
+          role: 'admin',
+          tenantName: organizationInfo.companyName,
+          tenantSlug: organizationInfo.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          tenantPlan: paymentInfo.planId,
+          stripeSubscriptionId,
+          stripeCustomerId,
+          organizationInfo,
+          userInfo,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Falha ao criar conta');
+      }
+
       return response.json();
     },
     onSuccess: () => {
@@ -255,7 +302,7 @@ export function OnboardingWizard() {
       
       // Redirect to organization portal after 3 seconds
       setTimeout(() => {
-        window.location.href = '/organization-portal';
+        window.location.href = '/organization';
       }, 3000);
     },
     onError: (error: any) => {
