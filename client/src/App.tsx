@@ -15,6 +15,7 @@ import { CustomerPortal } from "@/pages/customer-portal";
 import { AdminPortal } from "@/pages/admin-portal";
 import NotFound from "@/pages/not-found";
 import { authService } from "@/lib/auth";
+import { usePWA } from "@/hooks/use-pwa";
 import type { PortalType } from "@/types/portal";
 
 function Router() {
