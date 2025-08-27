@@ -71,10 +71,13 @@ function Router() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PortalNavigation 
-        currentPortal={currentPortal} 
-        onPortalChange={handlePortalChange} 
-      />
+      {/* Only show navigation on non-register pages */}
+      {!location.startsWith('/register') && (
+        <PortalNavigation 
+          currentPortal={currentPortal} 
+          onPortalChange={handlePortalChange} 
+        />
+      )}
       
       <Switch>
         <Route path="/" component={SaasPortal} />

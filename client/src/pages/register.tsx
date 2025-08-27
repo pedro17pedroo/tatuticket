@@ -57,50 +57,6 @@ export function RegisterPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Crie sua Conta TatuTicket
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Configure sua organização em poucos passos e comece a revolucionar seu atendimento ao cliente
-          </p>
-        </div>
-
-        {/* Benefits Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-rocket text-xl"></i>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Configuração Rápida</h3>
-              <p className="text-gray-600">Configure sua organização em menos de 5 minutos</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-shield-alt text-xl"></i>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">100% Seguro</h3>
-              <p className="text-gray-600">Seus dados protegidos com criptografia AES-256</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-headset text-xl"></i>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Suporte 24/7</h3>
-              <p className="text-gray-600">Nossa equipe está sempre disponível para ajudar</p>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
 
       {/* Onboarding Wizard - Always open on this page */}
       <OnboardingWizard
