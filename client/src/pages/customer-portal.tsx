@@ -9,6 +9,7 @@ import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { KnowledgeBaseSearch } from "@/components/customer/KnowledgeBaseSearch";
 import { TicketDetailsView } from "@/components/customer/ticket-details-view";
 import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
+import { SLAExceededBilling } from "@/components/customer/SLAExceededBilling";
 import { AIChatbot } from "@/components/customer/ai-chatbot";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
@@ -37,10 +38,17 @@ const quickActions = [
   },
   {
     icon: "fa-chart-line",
-    title: "Relatórios",
+    title: "Relatórios SLA",
     description: "Ver estatísticas dos seus tickets",
     color: "bg-purple-500 hover:bg-purple-600",
     action: "reports"
+  },
+  {
+    icon: "fa-credit-card",
+    title: "Faturas SLA",
+    description: "Gerenciar excedentes e pagamentos",
+    color: "bg-orange-500 hover:bg-orange-600",
+    action: "billing"
   }
 ];
 
@@ -118,6 +126,9 @@ export function CustomerPortal() {
         break;
       case 'reports':
         setSelectedAction('reports');
+        break;
+      case 'billing':
+        setSelectedAction('billing');
         break;
     }
   };
@@ -225,6 +236,40 @@ export function CustomerPortal() {
     );
   }
 
+  if (selectedAction === 'billing') {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-semibold text-gray-900">Central de Suporte</h1>
+                <Badge variant="outline" className="bg-orange-100 text-orange-800">
+                  Faturas SLA
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-gray-900">{user.username}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <SLAExceededBilling />
+          <div className="mt-6 text-center">
+            <Button onClick={handleBackToPortal} data-testid="button-back-to-portal">
+              Voltar ao Portal
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -254,7 +299,7 @@ export function CustomerPortal() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           {quickActions.map((action, index) => (
             <Button
               key={index}

@@ -105,12 +105,12 @@ export function WorkflowAutomation() {
   const { data: workflows = MOCK_WORKFLOWS, isLoading } = useQuery({
     queryKey: ['/api/workflows', 'tenant-1'], // Replace with actual tenant ID
     enabled: true,
-  });
+  }) as { data: any[], isLoading: boolean };
 
   const { data: templates = [] } = useQuery({
     queryKey: ['/api/workflows/templates/list'],
     enabled: true,
-  });
+  }) as { data: any[] };
 
   const createWorkflowMutation = useMutation({
     mutationFn: async (workflow: any) => {
@@ -180,7 +180,7 @@ export function WorkflowAutomation() {
             </DialogHeader>
             <WorkflowCreateForm 
               onSubmit={(data) => createWorkflowMutation.mutate(data)}
-              templates={templates}
+              templates={templates || []}
             />
           </DialogContent>
         </Dialog>
@@ -277,7 +277,7 @@ export function WorkflowAutomation() {
         </TabsContent>
 
         <TabsContent value="executions" className="space-y-4">
-          <WorkflowExecutions workflows={workflows} />
+          <WorkflowExecutions workflows={workflows || []} />
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
