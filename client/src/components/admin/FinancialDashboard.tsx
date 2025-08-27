@@ -2,581 +2,465 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  CreditCard,
-  AlertTriangle,
-  CheckCircle,
-  Calendar,
-  Download,
-  Eye,
-  BarChart3,
-  PieChart,
-  ArrowUpRight,
-  ArrowDownRight,
-  Building,
-  Clock
+import { 
+  DollarSign, TrendingUp, TrendingDown, Users, CreditCard, 
+  AlertTriangle, CheckCircle, Calendar, Download, RefreshCw,
+  Building, Percent, Target, Award
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Pie, Cell } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 
-interface FinancialMetrics {
+interface RevenueMetrics {
   totalRevenue: number;
-  monthlyRevenue: number;
-  annualRevenue: number;
-  revenueGrowth: number;
-  activeTenants: number;
-  totalTenants: number;
-  tenantGrowth: number;
-  averageRevenuePerTenant: number;
+  monthlyRecurring: number;
+  growth: number;
   churnRate: number;
+  averageRevenuePerUser: number;
   lifetimeValue: number;
 }
 
-interface TenantFinancialData {
-  tenantId: string;
-  tenantName: string;
+interface TenantFinancial {
+  id: string;
+  name: string;
   plan: string;
   monthlyRevenue: number;
-  annualRevenue: number;
-  usageMetrics: {
+  totalRevenue: number;
+  paymentStatus: 'current' | 'overdue' | 'failed';
+  nextBilling: string;
+  usage: {
     tickets: number;
-    users: number;
+    agents: number;
     storage: number;
-    apiCalls: number;
   };
-  billingStatus: 'active' | 'overdue' | 'suspended';
-  nextBillingDate: Date;
-  lastPayment: Date;
-  paymentMethod: string;
+  limits: {
+    tickets: number;
+    agents: number;
+    storage: number;
+  };
 }
-
-interface RevenueData {
-  month: string;
-  revenue: number;
-  growth: number;
-  tenants: number;
-}
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-interface BillingIssue {
-  tenantId: string;
-  tenantName: string;
-  type: 'overdue' | 'failed_payment' | 'chargeback';
-  amount: number;
-  daysPastDue: number;
-  lastAttempt: Date;
-  attempts: number;
-}
-
-interface PlanAnalytics {
-  plan: string;
-  tenants: number;
-  revenue: number;
-  growth: number;
-}
-
-// Utility functions
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(amount / 100);
-};
-
-const formatDate = (date: Date) => {
-  return new Intl.DateTimeFormat('pt-BR').format(date);
-};
-
-const apiRequest = async (url: string, options: RequestInit = {}) => {
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    ...options
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
-  
-  return response.json();
-};
-
-const MOCK_TENANT_DATA: TenantFinancialData[] = [
-  {
-    tenantId: '1',
-    tenantName: 'TechCorp Solutions',
-    plan: 'Enterprise',
-    monthlyRevenue: 2500,
-    annualRevenue: 30000,
-    usageMetrics: {
-      tickets: 1250,
-      users: 45,
-      storage: 15.5,
-      apiCalls: 8500
-    },
-    billingStatus: 'active',
-    nextBillingDate: new Date('2025-02-15'),
-    lastPayment: new Date('2025-01-15'),
-    paymentMethod: 'Credit Card (**** 4532)'
-  },
-  {
-    tenantId: '2',
-    tenantName: 'StartupXYZ',
-    plan: 'Professional',
-    monthlyRevenue: 99,
-    annualRevenue: 1188,
-    usageMetrics: {
-      tickets: 240,
-      users: 12,
-      storage: 2.8,
-      apiCalls: 1200
-    },
-    billingStatus: 'active',
-    nextBillingDate: new Date('2025-02-08'),
-    lastPayment: new Date('2025-01-08'),
-    paymentMethod: 'Credit Card (**** 1234)'
-  },
-  {
-    tenantId: '3',
-    tenantName: 'BigCorp Inc',
-    plan: 'Enterprise Plus',
-    monthlyRevenue: 5000,
-    annualRevenue: 60000,
-    usageMetrics: {
-      tickets: 3500,
-      users: 120,
-      storage: 45.2,
-      apiCalls: 25000
-    },
-    billingStatus: 'overdue',
-    nextBillingDate: new Date('2025-01-25'),
-    lastPayment: new Date('2024-12-25'),
-    paymentMethod: 'Bank Transfer'
-  }
-];
-
-const MOCK_REVENUE_DATA: RevenueData[] = [
-  { month: 'Jul 24', revenue: 35000, growth: 5.2, tenants: 98 },
-  { month: 'Aug 24', revenue: 38500, growth: 10.0, tenants: 105 },
-  { month: 'Sep 24', revenue: 41000, growth: 6.5, tenants: 112 },
-  { month: 'Oct 24', revenue: 39800, growth: -2.9, tenants: 118 },
-  { month: 'Nov 24', revenue: 42200, growth: 6.0, tenants: 125 },
-  { month: 'Dec 24', revenue: 44500, growth: 5.4, tenants: 132 },
-  { month: 'Jan 25', revenue: 42500, growth: -4.5, tenants: 127 }
-];
 
 export function FinancialDashboard() {
-  const [timeFilter, setTimeFilter] = useState('last-6-months');
-  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [selectedPeriod, setSelectedPeriod] = useState('current_month');
+  const [selectedMetric, setSelectedMetric] = useState('revenue');
 
-  const { data: financialMetrics, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ['/api/admin/financial-metrics', timeFilter],
-    queryFn: async () => {
-      // Mock API call
-      return MOCK_FINANCIAL_METRICS;
-    },
-  });
-
-  const { data: tenantsData, isLoading: isLoadingTenants } = useQuery({
-    queryKey: ['/api/admin/tenants-financial'],
-    queryFn: async () => {
-      // Mock API call
-      return MOCK_TENANT_DATA;
-    },
-  });
-
-  const { data: revenueData, isLoading: isLoadingRevenue } = useQuery({
-    queryKey: ['/api/admin/revenue-data', timeFilter],
-    queryFn: async () => {
-      // Mock API call
-      return MOCK_REVENUE_DATA;
-    },
-  });
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(amount);
+  // Mock financial data
+  const revenueMetrics: RevenueMetrics = {
+    totalRevenue: 284500,
+    monthlyRecurring: 45600,
+    growth: 12.5,
+    churnRate: 3.2,
+    averageRevenuePerUser: 89.50,
+    lifetimeValue: 2850
   };
 
-  const getStatusBadge = (status: string) => {
+  const tenantsData: TenantFinancial[] = [
+    {
+      id: '1',
+      name: 'TechCorp Solutions',
+      plan: 'Enterprise',
+      monthlyRevenue: 2499,
+      totalRevenue: 24990,
+      paymentStatus: 'current',
+      nextBilling: '2025-02-15',
+      usage: { tickets: 850, agents: 15, storage: 4500 },
+      limits: { tickets: 1000, agents: 20, storage: 5000 }
+    },
+    {
+      id: '2',
+      name: 'StartupXYZ',
+      plan: 'Professional',
+      monthlyRevenue: 149,
+      totalRevenue: 1790,
+      paymentStatus: 'overdue',
+      nextBilling: '2025-01-20',
+      usage: { tickets: 180, agents: 3, storage: 1200 },
+      limits: { tickets: 200, agents: 5, storage: 2000 }
+    },
+    {
+      id: '3',
+      name: 'Global Services Inc',
+      plan: 'Enterprise',
+      monthlyRevenue: 2499,
+      totalRevenue: 37485,
+      paymentStatus: 'current',
+      nextBilling: '2025-02-10',
+      usage: { tickets: 1200, agents: 25, storage: 7800 },
+      limits: { tickets: 1500, agents: 30, storage: 10000 }
+    }
+  ];
+
+  const { data: revenue = revenueMetrics } = useQuery<RevenueMetrics>({
+    queryKey: ['/api/admin/revenue-metrics', selectedPeriod],
+    enabled: true
+  });
+
+  const { data: tenants = tenantsData } = useQuery<TenantFinancial[]>({
+    queryKey: ['/api/admin/tenant-financials'],
+    enabled: true
+  });
+
+  const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-800">Em Atraso</Badge>;
-      case 'suspended':
-        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      case 'current': return 'bg-green-100 text-green-800';
+      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'failed': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getGrowthIcon = (growth: number) => {
-    if (growth > 0) {
-      return <ArrowUpRight className="h-4 w-4 text-green-600" />;
-    } else if (growth < 0) {
-      return <ArrowDownRight className="h-4 w-4 text-red-600" />;
+  const getPaymentStatusText = (status: string) => {
+    switch (status) {
+      case 'current': return 'Em Dia';
+      case 'overdue': return 'Vencido';
+      case 'failed': return 'Falhou';
+      default: return status;
     }
-    return null;
   };
+
+  const getPlanColor = (plan: string) => {
+    switch (plan.toLowerCase()) {
+      case 'starter': return 'bg-blue-100 text-blue-800';
+      case 'professional': return 'bg-purple-100 text-purple-800';
+      case 'enterprise': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const calculateUsagePercentage = (used: number, limit: number) => {
+    return Math.min((used / limit) * 100, 100);
+  };
+
+  const totalCurrentRevenue = tenants
+    .filter(t => t.paymentStatus === 'current')
+    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
+
+  const overdueRevenue = tenants
+    .filter(t => t.paymentStatus === 'overdue')
+    .reduce((sum, t) => sum + t.monthlyRevenue, 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Financial Dashboard</h2>
-          <p className="text-muted-foreground">Monitor revenue, billing, and tenant financial metrics</p>
-        </div>
+    <div className="space-y-6" data-testid="financial-dashboard">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Dashboard Financeiro</h1>
         <div className="flex gap-2">
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
-            <SelectTrigger className="w-48" data-testid="select-time-filter">
-              <SelectValue placeholder="Select time period" />
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod} data-testid="select-period">
+            <SelectTrigger className="w-48">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="last-30-days">Last 30 Days</SelectItem>
-              <SelectItem value="last-3-months">Last 3 Months</SelectItem>
-              <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-              <SelectItem value="last-12-months">Last 12 Months</SelectItem>
-              <SelectItem value="year-to-date">Year to Date</SelectItem>
+              <SelectItem value="current_month">Mês Atual</SelectItem>
+              <SelectItem value="last_month">Mês Anterior</SelectItem>
+              <SelectItem value="quarter">Trimestre</SelectItem>
+              <SelectItem value="year">Ano</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" data-testid="button-export-financial">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
+          <Button variant="outline" data-testid="button-refresh">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button data-testid="button-export">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar
           </Button>
         </div>
       </div>
 
-      {/* Financial Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+      {/* Cards de Métricas Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card data-testid="card-total-revenue">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <DollarSign className="w-5 h-5 text-green-600" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold" data-testid="metric-total-revenue">
-                  {formatCurrency(financialMetrics?.totalRevenue || 0)}
-                </p>
-                <div className="flex items-center mt-2">
-                  {getGrowthIcon(financialMetrics?.revenueGrowth || 0)}
-                  <span className={`text-sm ${financialMetrics?.revenueGrowth! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {financialMetrics?.revenueGrowth?.toFixed(1)}% vs last period
-                  </span>
+                <p className="text-sm text-gray-600">Receita Total</p>
+                <p className="text-xl font-bold">R$ {revenue.totalRevenue.toLocaleString('pt-BR')}</p>
+                <div className="flex items-center gap-1 text-xs">
+                  <TrendingUp className="w-3 h-3 text-green-600" />
+                  <span className="text-green-600">+{revenue.growth}%</span>
                 </div>
               </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-mrr">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <RefreshCw className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">MRR</p>
+                <p className="text-xl font-bold">R$ {revenue.monthlyRecurring.toLocaleString('pt-BR')}</p>
+                <p className="text-xs text-gray-500">Receita Recorrente Mensal</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
-                <p className="text-2xl font-bold" data-testid="metric-monthly-revenue">
-                  {formatCurrency(financialMetrics?.monthlyRevenue || 0)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">Current month</p>
+        <Card data-testid="card-arpu">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="w-5 h-5 text-purple-600" />
               </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">ARPU</p>
+                <p className="text-xl font-bold">R$ {revenue.averageRevenuePerUser.toFixed(2)}</p>
+                <p className="text-xs text-gray-500">Receita Média por Usuário</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card data-testid="card-churn-rate">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Tenants</p>
-                <p className="text-2xl font-bold" data-testid="metric-active-tenants">
-                  {financialMetrics?.activeTenants || 0}
-                </p>
-                <div className="flex items-center mt-2">
-                  {getGrowthIcon(financialMetrics?.tenantGrowth || 0)}
-                  <span className={`text-sm ${financialMetrics?.tenantGrowth! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {financialMetrics?.tenantGrowth?.toFixed(1)}% growth
-                  </span>
-                </div>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg Revenue per Tenant</p>
-                <p className="text-2xl font-bold" data-testid="metric-arpt">
-                  {formatCurrency(financialMetrics?.averageRevenuePerTenant || 0)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">Per month</p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-full">
-                <BarChart3 className="h-6 w-6 text-orange-600" />
+                <p className="text-sm text-gray-600">Taxa de Churn</p>
+                <p className="text-xl font-bold">{revenue.churnRate}%</p>
+                <p className="text-xs text-gray-500">Cancelamentos</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue="tenants" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="tenants">Tenant Management</TabsTrigger>
-          <TabsTrigger value="billing">Billing & Payments</TabsTrigger>
+          <TabsTrigger value="tenants">Clientes</TabsTrigger>
+          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="forecasting">Projeções</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Revenue Trend Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {revenueData?.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium w-16">{item.month}</span>
-                        <div className="flex-1">
-                          <Progress value={(item.revenue / 50000) * 100} className="h-2" />
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(item.revenue)}</p>
-                        <div className="flex items-center gap-1">
-                          {getGrowthIcon(item.growth)}
-                          <span className={`text-xs ${item.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {item.growth.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+        <TabsContent value="tenants" className="space-y-4">
+          {/* Resumo de Status de Pagamentos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card data-testid="card-current-payments">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Pagamentos em Dia</p>
+                    <p className="text-xl font-bold">R$ {totalCurrentRevenue.toLocaleString('pt-BR')}</p>
+                    <p className="text-xs text-gray-500">
+                      {tenants.filter(t => t.paymentStatus === 'current').length} clientes
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Key Metrics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Performance Indicators</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Churn Rate</span>
-                    <div className="text-right">
-                      <span className="text-lg font-bold">{financialMetrics?.churnRate}%</span>
-                      <Progress value={financialMetrics?.churnRate || 0} className="h-2 w-20 mt-1" />
-                    </div>
+            <Card data-testid="card-overdue-payments">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Customer LTV</span>
-                    <span className="text-lg font-bold">{formatCurrency(financialMetrics?.lifetimeValue || 0)}</span>
+                  <div>
+                    <p className="text-sm text-gray-600">Pagamentos Vencidos</p>
+                    <p className="text-xl font-bold text-red-600">R$ {overdueRevenue.toLocaleString('pt-BR')}</p>
+                    <p className="text-xs text-gray-500">
+                      {tenants.filter(t => t.paymentStatus === 'overdue').length} clientes
+                    </p>
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Total Tenants</span>
-                    <span className="text-lg font-bold">{financialMetrics?.totalTenants}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-ltv">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Award className="w-5 h-5 text-orange-600" />
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Annual Revenue</span>
-                    <span className="text-lg font-bold">{formatCurrency(financialMetrics?.annualRevenue || 0)}</span>
+                  <div>
+                    <p className="text-sm text-gray-600">LTV Médio</p>
+                    <p className="text-xl font-bold">R$ {revenue.lifetimeValue.toLocaleString('pt-BR')}</p>
+                    <p className="text-xs text-gray-500">Lifetime Value</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        {/* Tenant Management Tab */}
-        <TabsContent value="tenants" className="space-y-6">
-          <Card>
+          {/* Tabela de Clientes */}
+          <Card data-testid="card-tenants-table">
             <CardHeader>
-              <CardTitle>Tenant Financial Overview</CardTitle>
+              <CardTitle>Visão Geral dos Clientes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-4">Tenant</th>
-                      <th className="text-left p-4">Plan</th>
-                      <th className="text-left p-4">Monthly Revenue</th>
-                      <th className="text-left p-4">Annual Revenue</th>
-                      <th className="text-left p-4">Status</th>
-                      <th className="text-left p-4">Next Billing</th>
-                      <th className="text-left p-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tenantsData?.map((tenant) => (
-                      <tr key={tenant.tenantId} className="border-b hover:bg-gray-50">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-gray-100 p-2 rounded">
-                              <Building className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{tenant.tenantName}</p>
-                              <p className="text-sm text-muted-foreground">{tenant.tenantId}</p>
-                            </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Plano</TableHead>
+                    <TableHead>Receita Mensal</TableHead>
+                    <TableHead>Status Pagamento</TableHead>
+                    <TableHead>Próx. Cobrança</TableHead>
+                    <TableHead>Uso Tickets</TableHead>
+                    <TableHead>Uso Agentes</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tenants.map((tenant) => (
+                    <TableRow key={tenant.id} data-testid={`row-tenant-${tenant.id}`}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{tenant.name}</div>
+                          <div className="text-sm text-gray-500">ID: {tenant.id}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getPlanColor(tenant.plan)}>
+                          {tenant.plan}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        R$ {tenant.monthlyRevenue.toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getPaymentStatusColor(tenant.paymentStatus)}>
+                          {getPaymentStatusText(tenant.paymentStatus)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(tenant.nextBilling).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="w-24">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>{tenant.usage.tickets}</span>
+                            <span>{tenant.limits.tickets}</span>
                           </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge variant="outline">{tenant.plan}</Badge>
-                        </td>
-                        <td className="p-4 font-medium">
-                          {formatCurrency(tenant.monthlyRevenue)}
-                        </td>
-                        <td className="p-4 font-medium">
-                          {formatCurrency(tenant.annualRevenue)}
-                        </td>
-                        <td className="p-4">
-                          {getStatusBadge(tenant.billingStatus)}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">
-                              {tenant.nextBillingDate.toLocaleDateString()}
-                            </span>
+                          <Progress 
+                            value={calculateUsagePercentage(tenant.usage.tickets, tenant.limits.tickets)}
+                            className="h-2"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="w-24">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>{tenant.usage.agents}</span>
+                            <span>{tenant.limits.agents}</span>
                           </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setSelectedTenant(tenant.tenantId)}
-                              data-testid={`button-view-tenant-${tenant.tenantId}`}
-                            >
-                              <Eye className="h-4 w-4" />
+                          <Progress 
+                            value={calculateUsagePercentage(tenant.usage.agents, tenant.limits.agents)}
+                            className="h-2"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" data-testid={`button-view-${tenant.id}`}>
+                            Ver
+                          </Button>
+                          {tenant.paymentStatus === 'overdue' && (
+                            <Button variant="outline" size="sm" className="text-red-600" data-testid={`button-collect-${tenant.id}`}>
+                              Cobrar
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              data-testid={`button-manage-tenant-${tenant.tenantId}`}
-                            >
-                              Manage
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <Card data-testid="card-payment-methods">
+            <CardHeader>
+              <CardTitle>Métodos de Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <CreditCard className="w-8 h-8 text-blue-600" />
+                  <div>
+                    <p className="font-medium">Cartão de Crédito</p>
+                    <p className="text-sm text-gray-600">85% dos pagamentos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <Building className="w-8 h-8 text-green-600" />
+                  <div>
+                    <p className="font-medium">Boleto Bancário</p>
+                    <p className="text-sm text-gray-600">12% dos pagamentos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 border rounded-lg">
+                  <Target className="w-8 h-8 text-purple-600" />
+                  <div>
+                    <p className="font-medium">PIX</p>
+                    <p className="text-sm text-gray-600">3% dos pagamentos</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Billing & Payments Tab */}
-        <TabsContent value="billing" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card>
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card data-testid="card-revenue-trends">
               <CardHeader>
-                <CardTitle>Payment Status</CardTitle>
+                <CardTitle>Tendências de Receita</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Active Payments</span>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-bold">124</span>
-                    </div>
+                    <span>Crescimento MoM</span>
+                    <span className="font-bold text-green-600">+{revenue.growth}%</span>
                   </div>
-                  
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Overdue Payments</span>
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <span className="font-bold">3</span>
-                    </div>
+                    <span>Taxa de Retenção</span>
+                    <span className="font-bold">{(100 - revenue.churnRate).toFixed(1)}%</span>
                   </div>
-                  
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Failed Payments</span>
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="font-bold">1</span>
-                    </div>
+                    <span>Receita por Cliente</span>
+                    <span className="font-bold">R$ {revenue.averageRevenuePerUser.toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-customer-metrics">
               <CardHeader>
-                <CardTitle>Recent Transactions</CardTitle>
+                <CardTitle>Métricas de Clientes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <div>
-                      <p className="font-medium">TechCorp Solutions</p>
-                      <p className="text-sm text-muted-foreground">Enterprise Plan</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(2500)}</p>
-                      <p className="text-sm text-green-600">Paid</p>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Total de Clientes</span>
+                    <span className="font-bold">{tenants.length}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <div>
-                      <p className="font-medium">StartupXYZ</p>
-                      <p className="text-sm text-muted-foreground">Professional Plan</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(99)}</p>
-                      <p className="text-sm text-green-600">Paid</p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span>Clientes Ativos</span>
+                    <span className="font-bold text-green-600">
+                      {tenants.filter(t => t.paymentStatus === 'current').length}
+                    </span>
                   </div>
-                  
-                  <div className="flex justify-between items-center p-3 bg-red-50 rounded">
-                    <div>
-                      <p className="font-medium">BigCorp Inc</p>
-                      <p className="text-sm text-muted-foreground">Enterprise Plus</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(5000)}</p>
-                      <p className="text-sm text-red-600">Overdue</p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span>Clientes em Atraso</span>
+                    <span className="font-bold text-red-600">
+                      {tenants.filter(t => t.paymentStatus === 'overdue').length}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -584,61 +468,49 @@ export function FinancialDashboard() {
           </div>
         </TabsContent>
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            <Card>
+        <TabsContent value="forecasting" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card data-testid="card-revenue-forecast">
               <CardHeader>
-                <CardTitle>Revenue by Plan</CardTitle>
+                <CardTitle>Projeção de Receita</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Enterprise Plus</span>
-                    <div className="flex items-center gap-2">
-                      <Progress value={60} className="h-2 w-20" />
-                      <span className="font-medium">60%</span>
-                    </div>
+                    <span>Próximo Mês</span>
+                    <span className="font-bold">R$ {Math.round(revenue.monthlyRecurring * 1.125).toLocaleString('pt-BR')}</span>
                   </div>
-                  
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Enterprise</span>
-                    <div className="flex items-center gap-2">
-                      <Progress value={25} className="h-2 w-20" />
-                      <span className="font-medium">25%</span>
-                    </div>
+                    <span>Próximo Trimestre</span>
+                    <span className="font-bold">R$ {Math.round(revenue.monthlyRecurring * 3.5).toLocaleString('pt-BR')}</span>
                   </div>
-                  
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Professional</span>
-                    <div className="flex items-center gap-2">
-                      <Progress value={15} className="h-2 w-20" />
-                      <span className="font-medium">15%</span>
-                    </div>
+                    <span>Próximo Ano</span>
+                    <span className="font-bold">R$ {Math.round(revenue.monthlyRecurring * 15).toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-growth-targets">
               <CardHeader>
-                <CardTitle>Growth Forecast</CardTitle>
+                <CardTitle>Metas de Crescimento</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Next Month</span>
-                    <span className="font-bold text-green-600">+8.5%</span>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span>Meta Mensal</span>
+                      <span>R$ 50.000</span>
+                    </div>
+                    <Progress value={(revenue.monthlyRecurring / 50000) * 100} className="h-2" />
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Next Quarter</span>
-                    <span className="font-bold text-green-600">+22.3%</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Next Year</span>
-                    <span className="font-bold text-green-600">+45.7%</span>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span>Meta Anual</span>
+                      <span>R$ 600.000</span>
+                    </div>
+                    <Progress value={(revenue.totalRevenue / 600000) * 100} className="h-2" />
                   </div>
                 </div>
               </CardContent>

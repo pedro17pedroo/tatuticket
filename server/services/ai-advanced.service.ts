@@ -38,13 +38,15 @@ interface KnowledgeBaseSuggestion {
   summary: string;
 }
 
+import OpenAI from 'openai';
+
 class AIAdvancedService {
   private openaiEnabled = false;
 
   constructor() {
     this.openaiEnabled = !!process.env.OPENAI_API_KEY;
     if (this.openaiEnabled) {
-      console.log('🧠 Advanced AI service initialized');
+      console.log('🧠 Advanced AI service initialized with OpenAI');
     } else {
       console.warn('🧠 Advanced AI service running in mock mode - OpenAI API key not configured');
     }
@@ -104,9 +106,55 @@ class AIAdvancedService {
   }
 
   private async performRealTicketAnalysis(content: string, context: any): Promise<TicketAnalysis> {
-    // This would integrate with OpenAI's API for real analysis
-    // For now, return mock data
-    return this.mockTicketAnalysis('real', content);
+    if (!process.env.OPENAI_API_KEY) {
+      return this.mockTicketAnalysis('real', content);
+    }
+
+    try {
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI assistant that analyzes customer support tickets. Analyze the ticket content and provide a JSON response with the following structure:
+            {
+              "sentiment": "positive|neutral|negative",
+              "urgency": 0-100,
+              "category": "technical|billing|account|feature_request|bug_report",
+              "suggestedActions": ["action1", "action2"],
+              "duplicateTickets": ["TICK-123", "TICK-456"],
+              "estimatedResolutionTime": 1-48,
+              "requiredExpertise": ["expertise1", "expertise2"]
+            }`
+          },
+          {
+            role: "user",
+            content: `Analyze this ticket: ${content}\n\nContext: ${JSON.stringify(context)}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (response) {
+        try {
+          return JSON.parse(response);
+        } catch {
+          // Fallback to mock if JSON parsing fails
+          return this.mockTicketAnalysis('real', content);
+        }
+      }
+      
+      return this.mockTicketAnalysis('real', content);
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      return this.mockTicketAnalysis('real', content);
+    }
   }
 
   async predictSLABreach(tickets: any[]): Promise<SLAPrediction[]> {
@@ -358,8 +406,8 @@ class AIAdvancedService {
     const words1 = new Set(text1.toLowerCase().split(/\W+/));
     const words2 = new Set(text2.toLowerCase().split(/\W+/));
     
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
-    const union = new Set([...words1, ...words2]);
+    const intersection = new Set(Array.from(words1).filter(x => words2.has(x)));
+    const union = new Set([...Array.from(words1), ...Array.from(words2)]);
     
     return union.size > 0 ? intersection.size / union.size : 0;
   }
