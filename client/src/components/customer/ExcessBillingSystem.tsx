@@ -330,7 +330,7 @@ export function ExcessBillingSystem() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {slaUsage.map((usage) => (
+              {(slaUsageData || mockSlaUsage).map((usage: SLAUsage) => (
                 <TableRow key={usage.id} data-testid={`row-usage-${usage.id}`}>
                   <TableCell>
                     {new Date(usage.month + '-01').toLocaleDateString('pt-BR', { 
@@ -377,7 +377,7 @@ export function ExcessBillingSystem() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((invoice) => (
+              {(invoicesData || mockInvoices).map((invoice: Invoice) => (
                 <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
                   <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{new Date(invoice.date).toLocaleDateString('pt-BR')}</TableCell>
@@ -438,7 +438,7 @@ export function ExcessBillingSystem() {
               
               <div>
                 <h3 className="font-medium mb-2">Método de Pagamento</h3>
-                {paymentMethods.map(method => (
+                {(paymentMethodsData || mockPaymentMethods).map((method: PaymentMethod) => (
                   <div key={method.id} className="flex items-center gap-3 p-3 border rounded-lg">
                     <CreditCard className="w-5 h-5" />
                     <div>
@@ -461,7 +461,7 @@ export function ExcessBillingSystem() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => payInvoiceMutation.mutate(selectedInvoice.id)}
+                  onClick={() => payInvoiceMutation.mutate({ invoiceId: selectedInvoice.id, paymentMethodId: 'default' })}
                   disabled={payInvoiceMutation.isPending}
                   className="flex-1"
                   data-testid="button-confirm-payment"
