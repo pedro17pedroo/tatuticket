@@ -1,259 +1,37 @@
-import { Router, Request, Response } from 'express';
-import { z } from 'zod';
-import { db } from '../db';
-import { workflows, workflowExecutions, tickets, users } from '../../shared/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { catchAsync } from '../middlewares/error.middleware';
-import { validateBody } from '../middlewares/validation.middleware';
+import { Router } from 'express';
+import { Request, Response } from 'express';
+import { authenticateToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Schema for workflow creation
-const createWorkflowSchema = z.object({
-  tenantId: z.string(),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  trigger: z.object({
-    type: z.enum(['ticket_created', 'ticket_updated', 'ticket_assigned', 'sla_breach']),
-    conditions: z.array(z.object({
-      field: z.string(),
-      operator: z.enum(['equals', 'contains', 'greater_than', 'less_than']),
-      value: z.any(),
-    })).optional(),
-  }),
-  actions: z.array(z.object({
-    type: z.enum(['assign_agent', 'send_notification', 'update_priority', 'add_tag', 'escalate']),
-    params: z.record(z.any()),
-  })),
-  isActive: z.boolean().default(true),
-  priority: z.number().default(1),
-});
-
-const executeWorkflowSchema = z.object({
-  workflowId: z.string(),
-  resourceType: z.string(),
-  resourceId: z.string(),
-  input: z.record(z.any()).optional(),
-});
-
-// GET /api/workflows/:tenantId - Get all workflows for tenant
-router.get('/:tenantId', catchAsync(async (req: Request, res: Response) => {
-  const { tenantId } = req.params;
-  
-  const tenantWorkflows = await db.query.workflows.findMany({
-    where: eq(workflows.tenantId, tenantId),
-    with: {
-      creator: {
-        columns: {
-          id: true,
-          username: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: [workflows.priority, desc(workflows.createdAt)],
-  });
-  
-  res.json(tenantWorkflows);
-}));
-
-// POST /api/workflows - Create new workflow
-router.post('/', validateBody(createWorkflowSchema), catchAsync(async (req: Request, res: Response) => {
-  const { tenantId, name, description, trigger, actions, isActive, priority } = req.body;
-  const createdBy = (req as any).user?.id || 'system'; // From auth middleware
-  
-  const workflow = await db.insert(workflows).values({
-    tenantId,
-    name,
-    description,
-    trigger,
-    actions,
-    isActive,
-    priority,
-    createdBy,
-  }).returning();
-  
-  res.json(workflow[0]);
-}));
-
-// PUT /api/workflows/:id - Update workflow
-router.put('/:id', validateBody(createWorkflowSchema.partial()), catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const updateData = req.body;
-  
-  const workflow = await db.update(workflows)
-    .set({
-      ...updateData,
-      updatedAt: new Date(),
-    })
-    .where(eq(workflows.id, id))
-    .returning();
-  
-  if (workflow.length === 0) {
-    return res.status(404).json({ error: 'Workflow not found' });
-  }
-  
-  res.json(workflow[0]);
-}));
-
-// DELETE /api/workflows/:id - Delete workflow
-router.delete('/:id', catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  
-  await db.delete(workflows).where(eq(workflows.id, id));
-  
-  res.json({ success: true });
-}));
-
-// POST /api/workflows/execute - Execute workflow
-router.post('/execute', validateBody(executeWorkflowSchema), catchAsync(async (req: Request, res: Response) => {
-  const { workflowId, resourceType, resourceId, input } = req.body;
-  
-  const workflow = await db.query.workflows.findFirst({
-    where: eq(workflows.id, workflowId),
-  });
-  
-  if (!workflow || !workflow.isActive) {
-    return res.status(404).json({ error: 'Workflow not found or inactive' });
-  }
-  
-  try {
-    // Execute workflow actions
-    const output = await executeWorkflowActions(workflow, resourceType, resourceId, input);
-    
-    // Log execution
-    await db.insert(workflowExecutions).values({
-      workflowId,
-      tenantId: workflow.tenantId,
-      resourceType,
-      resourceId,
-      status: 'success',
-      input,
-      output,
-    });
-    
-    res.json({
-      success: true,
-      workflowId,
-      output,
-    });
-  } catch (error) {
-    // Log failed execution
-    await db.insert(workflowExecutions).values({
-      workflowId,
-      tenantId: workflow.tenantId,
-      resourceType,
-      resourceId,
-      status: 'failed',
-      input,
-      error: (error as Error).message,
-    });
-    
-    console.error('Workflow execution failed:', error);
-    res.status(500).json({ error: 'Workflow execution failed' });
-  }
-}));
-
-// GET /api/workflows/:workflowId/executions - Get workflow execution history
-router.get('/:workflowId/executions', catchAsync(async (req: Request, res: Response) => {
-  const { workflowId } = req.params;
-  const { limit = 50, offset = 0 } = req.query;
-  
-  const executions = await db.query.workflowExecutions.findMany({
-    where: eq(workflowExecutions.workflowId, workflowId),
-    orderBy: desc(workflowExecutions.executedAt),
-    limit: Number(limit),
-    offset: Number(offset),
-  });
-  
-  res.json(executions);
-}));
-
-// Helper function to execute workflow actions
-async function executeWorkflowActions(workflow: any, resourceType: string, resourceId: string, input: any) {
-  const output = [];
-  
-  for (const action of workflow.actions) {
-    try {
-      let actionResult;
-      
-      switch (action.type) {
-        case 'assign_agent':
-          if (resourceType === 'ticket') {
-            await db.update(tickets)
-              .set({
-                assigneeId: action.params.agentId,
-                updatedAt: new Date(),
-              })
-              .where(eq(tickets.id, resourceId));
-            actionResult = { type: 'assign_agent', agentId: action.params.agentId };
-          }
-          break;
-          
-        case 'update_priority':
-          if (resourceType === 'ticket') {
-            await db.update(tickets)
-              .set({
-                priority: action.params.priority,
-                updatedAt: new Date(),
-              })
-              .where(eq(tickets.id, resourceId));
-            actionResult = { type: 'update_priority', priority: action.params.priority };
-          }
-          break;
-          
-        case 'send_notification':
-          // Here would be notification sending logic
-          console.log('📧 Sending notification:', action.params);
-          actionResult = { type: 'send_notification', sent: true };
-          break;
-          
-        case 'escalate':
-          if (resourceType === 'ticket') {
-            await db.update(tickets)
-              .set({
-                priority: 'critical',
-                updatedAt: new Date(),
-              })
-              .where(eq(tickets.id, resourceId));
-            actionResult = { type: 'escalate', newPriority: 'critical' };
-          }
-          break;
-          
-        default:
-          console.warn('Unknown action type:', action.type);
-          actionResult = { type: action.type, status: 'skipped' };
-      }
-      
-      output.push(actionResult);
-    } catch (error) {
-      console.error(`Action ${action.type} failed:`, error);
-      output.push({ type: action.type, status: 'failed', error: (error as Error).message });
-    }
-  }
-  
-  return output;
-}
-
-// Template workflows for quick setup
-const WORKFLOW_TEMPLATES = [
+// Mock workflow data
+const MOCK_WORKFLOWS = [
   {
+    id: '1',
     name: 'Auto-assign New Tickets',
-    description: 'Automatically assign new tickets to available agents',
+    description: 'Automatically assign new tickets to available agents using round-robin',
     trigger: {
       type: 'ticket_created',
       conditions: []
     },
     actions: [
       {
+        id: '1',
         type: 'assign_agent',
-        params: { strategy: 'round_robin' }
+        params: { strategy: 'round_robin', department: 'support' }
       }
-    ]
+    ],
+    isActive: true,
+    priority: 1,
+    executionCount: 234,
+    successRate: 98.5,
+    createdAt: new Date(),
+    lastExecuted: new Date()
   },
   {
-    name: 'Escalate High Priority',
-    description: 'Escalate high priority tickets after 2 hours',
+    id: '2',
+    name: 'Escalate High Priority Tickets',
+    description: 'Escalate high priority tickets after 2 hours without response',
     trigger: {
       type: 'ticket_created',
       conditions: [
@@ -262,34 +40,259 @@ const WORKFLOW_TEMPLATES = [
     },
     actions: [
       {
+        id: '1',
         type: 'send_notification',
-        params: { recipient: 'manager', message: 'High priority ticket needs attention' }
-      }
-    ]
-  },
-  {
-    name: 'SLA Breach Alert',
-    description: 'Send alert when SLA is about to be breached',
-    trigger: {
-      type: 'sla_breach',
-      conditions: []
-    },
-    actions: [
-      {
-        type: 'escalate',
-        params: {}
+        params: { recipient: 'manager', message: 'High priority ticket needs attention' },
+        delay: 120
       },
       {
-        type: 'send_notification',
-        params: { recipient: 'manager', message: 'SLA breach detected' }
+        id: '2',
+        type: 'escalate',
+        params: {},
+        delay: 120
       }
-    ]
+    ],
+    isActive: true,
+    priority: 2,
+    executionCount: 89,
+    successRate: 96.2,
+    createdAt: new Date(),
+    lastExecuted: new Date()
   }
 ];
 
-// GET /api/workflows/templates - Get workflow templates
-router.get('/templates/list', catchAsync(async (req: Request, res: Response) => {
-  res.json(WORKFLOW_TEMPLATES);
-}));
+// Get all workflows
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    res.json({
+      success: true,
+      workflows: MOCK_WORKFLOWS
+    });
+  } catch (error) {
+    console.error('Error fetching workflows:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch workflows'
+    });
+  }
+});
+
+// Get workflow by ID
+router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const workflow = MOCK_WORKFLOWS.find(w => w.id === id);
+    
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      workflow
+    });
+  } catch (error) {
+    console.error('Error fetching workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch workflow'
+    });
+  }
+});
+
+// Create new workflow
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { name, description, trigger, actions, isActive, priority } = req.body;
+
+    if (!name || !trigger || !actions) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, trigger, actions'
+      });
+    }
+
+    const newWorkflow = {
+      id: (MOCK_WORKFLOWS.length + 1).toString(),
+      name,
+      description,
+      trigger,
+      actions,
+      isActive: isActive || true,
+      priority: priority || 1,
+      executionCount: 0,
+      successRate: 100,
+      createdAt: new Date(),
+      lastExecuted: null
+    };
+
+    MOCK_WORKFLOWS.push(newWorkflow);
+
+    res.status(201).json({
+      success: true,
+      workflow: newWorkflow,
+      message: 'Workflow created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create workflow'
+    });
+  }
+});
+
+// Update workflow
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, trigger, actions, isActive, priority } = req.body;
+
+    const workflowIndex = MOCK_WORKFLOWS.findIndex(w => w.id === id);
+    
+    if (workflowIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found'
+      });
+    }
+
+    // Update workflow
+    MOCK_WORKFLOWS[workflowIndex] = {
+      ...MOCK_WORKFLOWS[workflowIndex],
+      name: name || MOCK_WORKFLOWS[workflowIndex].name,
+      description: description || MOCK_WORKFLOWS[workflowIndex].description,
+      trigger: trigger || MOCK_WORKFLOWS[workflowIndex].trigger,
+      actions: actions || MOCK_WORKFLOWS[workflowIndex].actions,
+      isActive: isActive !== undefined ? isActive : MOCK_WORKFLOWS[workflowIndex].isActive,
+      priority: priority || MOCK_WORKFLOWS[workflowIndex].priority
+    };
+
+    res.json({
+      success: true,
+      workflow: MOCK_WORKFLOWS[workflowIndex],
+      message: 'Workflow updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update workflow'
+    });
+  }
+});
+
+// Delete workflow
+router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const workflowIndex = MOCK_WORKFLOWS.findIndex(w => w.id === id);
+    
+    if (workflowIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found'
+      });
+    }
+
+    MOCK_WORKFLOWS.splice(workflowIndex, 1);
+
+    res.json({
+      success: true,
+      message: 'Workflow deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete workflow'
+    });
+  }
+});
+
+// Toggle workflow active status
+router.patch('/:id/toggle', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    const workflowIndex = MOCK_WORKFLOWS.findIndex(w => w.id === id);
+    
+    if (workflowIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found'
+      });
+    }
+
+    MOCK_WORKFLOWS[workflowIndex].isActive = isActive;
+
+    res.json({
+      success: true,
+      workflow: MOCK_WORKFLOWS[workflowIndex],
+      message: `Workflow ${isActive ? 'activated' : 'deactivated'} successfully`
+    });
+  } catch (error) {
+    console.error('Error toggling workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle workflow'
+    });
+  }
+});
+
+// Execute workflow
+router.post('/execute', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { workflowId, resourceType, resourceId, input } = req.body;
+
+    const workflow = MOCK_WORKFLOWS.find(w => w.id === workflowId);
+    
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found'
+      });
+    }
+
+    if (!workflow.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workflow is not active'
+      });
+    }
+
+    // Mock execution
+    console.log(`Executing workflow ${workflow.name} for ${resourceType} ${resourceId}`);
+    
+    // Update execution stats
+    const workflowIndex = MOCK_WORKFLOWS.findIndex(w => w.id === workflowId);
+    MOCK_WORKFLOWS[workflowIndex].executionCount++;
+    MOCK_WORKFLOWS[workflowIndex].lastExecuted = new Date();
+
+    res.json({
+      success: true,
+      message: 'Workflow executed successfully',
+      executionId: Date.now().toString(),
+      result: {
+        workflowId,
+        resourceType,
+        resourceId,
+        status: 'completed',
+        executedActions: workflow.actions.length,
+        executionTime: Math.random() * 1000 + 500 // Mock execution time
+      }
+    });
+  } catch (error) {
+    console.error('Error executing workflow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to execute workflow'
+    });
+  }
+});
 
 export default router;

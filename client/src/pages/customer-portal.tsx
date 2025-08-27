@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
-import { KnowledgeBaseSearch } from "@/components/customer/knowledge-base-search";
+import { KnowledgeBaseSearch } from "@/components/customer/KnowledgeBaseSearch";
 import { TicketDetailsView } from "@/components/customer/ticket-details-view";
 import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
 import { AIChatbot } from "@/components/customer/ai-chatbot";

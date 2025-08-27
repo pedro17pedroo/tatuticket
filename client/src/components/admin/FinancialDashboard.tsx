@@ -1,358 +1,609 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import {
+  DollarSign,
   TrendingUp,
   TrendingDown,
-  DollarSign,
   Users,
   CreditCard,
   AlertTriangle,
-  Download,
+  CheckCircle,
   Calendar,
-  Target
-} from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
+  Download,
+  Eye,
+  BarChart3,
   PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+  ArrowUpRight,
+  ArrowDownRight,
+  Building,
+  Clock
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
-// Mock data - in real app would come from API
-const MOCK_FINANCIAL_DATA = {
-  overview: {
-    mrr: 125000,
-    mrrGrowth: 12.5,
-    arr: 1500000,
-    churnRate: 3.2,
-    ltv: 8500,
-    totalRevenue: 1650000,
-    activeSubscriptions: 245,
-    newSubscriptions: 18,
-    canceledSubscriptions: 8
-  },
-  monthlyRevenue: [
-    { month: 'Jan', revenue: 98000, subscriptions: 210 },
-    { month: 'Feb', revenue: 105000, subscriptions: 225 },
-    { month: 'Mar', revenue: 112000, subscriptions: 235 },
-    { month: 'Apr', revenue: 118000, subscriptions: 240 },
-    { month: 'May', revenue: 125000, subscriptions: 245 },
-    { month: 'Jun', revenue: 130000, subscriptions: 250 }
-  ],
-  planDistribution: [
-    { name: 'Freemium', value: 120, revenue: 0, color: '#8884d8' },
-    { name: 'Professional', value: 85, revenue: 84500, color: '#82ca9d' },
-    { name: 'Enterprise', value: 40, revenue: 40500, color: '#ffc658' }
-  ],
-  topTenants: [
-    { id: '1', name: 'TechCorp Solutions', plan: 'Enterprise', mrr: 2500, growth: 15.2 },
-    { id: '2', name: 'Digital Dynamics', plan: 'Professional', mrr: 990, growth: 8.5 },
-    { id: '3', name: 'Innovation Labs', plan: 'Enterprise', mrr: 2500, growth: -2.1 },
-    { id: '4', name: 'StartupHub', plan: 'Professional', mrr: 990, growth: 22.3 },
-    { id: '5', name: 'Global Systems', plan: 'Enterprise', mrr: 2500, growth: 6.8 }
-  ],
-  churnAnalysis: [
-    { month: 'Jan', churn: 2.8, signups: 15, cancellations: 6 },
-    { month: 'Feb', churn: 3.1, signups: 18, cancellations: 7 },
-    { month: 'Mar', churn: 2.9, signups: 20, cancellations: 7 },
-    { month: 'Apr', churn: 3.5, signups: 16, cancellations: 8 },
-    { month: 'May', churn: 3.2, signups: 18, cancellations: 8 },
-    { month: 'Jun', churn: 2.7, signups: 22, cancellations: 6 }
-  ]
-};
-
-interface FinancialDashboardProps {
-  tenantId?: string; // If provided, show single tenant view
+interface FinancialMetrics {
+  totalRevenue: number;
+  monthlyRevenue: number;
+  annualRevenue: number;
+  revenueGrowth: number;
+  activeTenants: number;
+  totalTenants: number;
+  tenantGrowth: number;
+  averageRevenuePerTenant: number;
+  churnRate: number;
+  lifetimeValue: number;
 }
 
-export function FinancialDashboard({ tenantId }: FinancialDashboardProps) {
-  const { data: financialData, isLoading } = useQuery({
-    queryKey: tenantId ? ['/api/financial-metrics', tenantId] : ['/api/financial-metrics/global'],
-    enabled: true,
+interface TenantFinancialData {
+  tenantId: string;
+  tenantName: string;
+  plan: string;
+  monthlyRevenue: number;
+  annualRevenue: number;
+  usageMetrics: {
+    tickets: number;
+    users: number;
+    storage: number;
+    apiCalls: number;
+  };
+  billingStatus: 'active' | 'overdue' | 'suspended';
+  nextBillingDate: Date;
+  lastPayment: Date;
+  paymentMethod: string;
+}
+
+interface RevenueData {
+  month: string;
+  revenue: number;
+  growth: number;
+  tenants: number;
+}
+
+const MOCK_FINANCIAL_METRICS: FinancialMetrics = {
+  totalRevenue: 485000,
+  monthlyRevenue: 42500,
+  annualRevenue: 510000,
+  revenueGrowth: 12.5,
+  activeTenants: 127,
+  totalTenants: 145,
+  tenantGrowth: 8.2,
+  averageRevenuePerTenant: 334.65,
+  churnRate: 3.2,
+  lifetimeValue: 8450
+};
+
+const MOCK_TENANT_DATA: TenantFinancialData[] = [
+  {
+    tenantId: '1',
+    tenantName: 'TechCorp Solutions',
+    plan: 'Enterprise',
+    monthlyRevenue: 2500,
+    annualRevenue: 30000,
+    usageMetrics: {
+      tickets: 1250,
+      users: 45,
+      storage: 15.5,
+      apiCalls: 8500
+    },
+    billingStatus: 'active',
+    nextBillingDate: new Date('2025-02-15'),
+    lastPayment: new Date('2025-01-15'),
+    paymentMethod: 'Credit Card (**** 4532)'
+  },
+  {
+    tenantId: '2',
+    tenantName: 'StartupXYZ',
+    plan: 'Professional',
+    monthlyRevenue: 99,
+    annualRevenue: 1188,
+    usageMetrics: {
+      tickets: 240,
+      users: 12,
+      storage: 2.8,
+      apiCalls: 1200
+    },
+    billingStatus: 'active',
+    nextBillingDate: new Date('2025-02-08'),
+    lastPayment: new Date('2025-01-08'),
+    paymentMethod: 'Credit Card (**** 1234)'
+  },
+  {
+    tenantId: '3',
+    tenantName: 'BigCorp Inc',
+    plan: 'Enterprise Plus',
+    monthlyRevenue: 5000,
+    annualRevenue: 60000,
+    usageMetrics: {
+      tickets: 3500,
+      users: 120,
+      storage: 45.2,
+      apiCalls: 25000
+    },
+    billingStatus: 'overdue',
+    nextBillingDate: new Date('2025-01-25'),
+    lastPayment: new Date('2024-12-25'),
+    paymentMethod: 'Bank Transfer'
+  }
+];
+
+const MOCK_REVENUE_DATA: RevenueData[] = [
+  { month: 'Jul 24', revenue: 35000, growth: 5.2, tenants: 98 },
+  { month: 'Aug 24', revenue: 38500, growth: 10.0, tenants: 105 },
+  { month: 'Sep 24', revenue: 41000, growth: 6.5, tenants: 112 },
+  { month: 'Oct 24', revenue: 39800, growth: -2.9, tenants: 118 },
+  { month: 'Nov 24', revenue: 42200, growth: 6.0, tenants: 125 },
+  { month: 'Dec 24', revenue: 44500, growth: 5.4, tenants: 132 },
+  { month: 'Jan 25', revenue: 42500, growth: -4.5, tenants: 127 }
+];
+
+export function FinancialDashboard() {
+  const [timeFilter, setTimeFilter] = useState('last-6-months');
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+
+  const { data: financialMetrics, isLoading: isLoadingMetrics } = useQuery({
+    queryKey: ['/api/admin/financial-metrics', timeFilter],
+    queryFn: async () => {
+      // Mock API call
+      return MOCK_FINANCIAL_METRICS;
+    },
   });
 
-  // Use mock data for now
-  const data = financialData || MOCK_FINANCIAL_DATA;
+  const { data: tenantsData, isLoading: isLoadingTenants } = useQuery({
+    queryKey: ['/api/admin/tenants-financial'],
+    queryFn: async () => {
+      // Mock API call
+      return MOCK_TENANT_DATA;
+    },
+  });
 
-  const formatCurrency = (value: number) => {
+  const { data: revenueData, isLoading: isLoadingRevenue } = useQuery({
+    queryKey: ['/api/admin/revenue-data', timeFilter],
+    queryFn: async () => {
+      // Mock API call
+      return MOCK_REVENUE_DATA;
+    },
+  });
+
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+      currency: 'BRL',
+    }).format(amount);
   };
 
-  const formatPercentage = (value: number) => {
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
+      case 'overdue':
+        return <Badge className="bg-red-100 text-red-800">Em Atraso</Badge>;
+      case 'suspended':
+        return <Badge className="bg-yellow-100 text-yellow-800">Suspenso</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const getGrowthIcon = (growth: number) => {
+    if (growth > 0) {
+      return <ArrowUpRight className="h-4 w-4 text-green-600" />;
+    } else if (growth < 0) {
+      return <ArrowDownRight className="h-4 w-4 text-red-600" />;
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-6" data-testid="financial-dashboard">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {tenantId ? 'Financeiro da Organização' : 'Dashboard Financeiro Global'}
-          </h2>
-          <p className="text-muted-foreground">
-            Visão completa das métricas financeiras e receita
-          </p>
+          <h2 className="text-2xl font-bold">Financial Dashboard</h2>
+          <p className="text-muted-foreground">Monitor revenue, billing, and tenant financial metrics</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" data-testid="button-export-financial">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
-          <Button variant="outline" size="sm">
-            <Calendar className="w-4 h-4 mr-2" />
-            Período
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-48" data-testid="select-time-filter">
+              <SelectValue placeholder="Select time period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last-30-days">Last 30 Days</SelectItem>
+              <SelectItem value="last-3-months">Last 3 Months</SelectItem>
+              <SelectItem value="last-6-months">Last 6 Months</SelectItem>
+              <SelectItem value="last-12-months">Last 12 Months</SelectItem>
+              <SelectItem value="year-to-date">Year to Date</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" data-testid="button-export-financial">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
           </Button>
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Financial Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card data-testid="card-mrr">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MRR</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-mrr-value">
-              {formatCurrency(data.overview.mrr)}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold" data-testid="metric-total-revenue">
+                  {formatCurrency(financialMetrics?.totalRevenue || 0)}
+                </p>
+                <div className="flex items-center mt-2">
+                  {getGrowthIcon(financialMetrics?.revenueGrowth || 0)}
+                  <span className={`text-sm ${financialMetrics?.revenueGrowth! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {financialMetrics?.revenueGrowth?.toFixed(1)}% vs last period
+                  </span>
+                </div>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full">
+                <DollarSign className="h-6 w-6 text-green-600" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              {data.overview.mrrGrowth > 0 ? (
-                <TrendingUp className="w-3 h-3 mr-1 text-green-500" />
-              ) : (
-                <TrendingDown className="w-3 h-3 mr-1 text-red-500" />
-              )}
-              {formatPercentage(data.overview.mrrGrowth)} vs mês anterior
-            </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-arr">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ARR</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-arr-value">
-              {formatCurrency(data.overview.arr)}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
+                <p className="text-2xl font-bold" data-testid="metric-monthly-revenue">
+                  {formatCurrency(financialMetrics?.monthlyRevenue || 0)}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">Current month</p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-full">
+                <TrendingUp className="h-6 w-6 text-blue-600" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Receita recorrente anual
-            </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-churn">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Churn</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-churn-value">
-              {data.overview.churnRate}%
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Tenants</p>
+                <p className="text-2xl font-bold" data-testid="metric-active-tenants">
+                  {financialMetrics?.activeTenants || 0}
+                </p>
+                <div className="flex items-center mt-2">
+                  {getGrowthIcon(financialMetrics?.tenantGrowth || 0)}
+                  <span className={`text-sm ${financialMetrics?.tenantGrowth! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {financialMetrics?.tenantGrowth?.toFixed(1)}% growth
+                  </span>
+                </div>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-full">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
             </div>
-            <Progress value={data.overview.churnRate} max={10} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Meta: < 5%
-            </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-active-subs">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-subs-value">
-              {data.overview.activeSubscriptions}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Avg Revenue per Tenant</p>
+                <p className="text-2xl font-bold" data-testid="metric-arpt">
+                  {formatCurrency(financialMetrics?.averageRevenuePerTenant || 0)}
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">Per month</p>
+              </div>
+              <div className="bg-orange-100 p-3 rounded-full">
+                <BarChart3 className="h-6 w-6 text-orange-600" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              +{data.overview.newSubscriptions} novas, -{data.overview.canceledSubscriptions} canceladas
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="revenue" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="revenue" data-testid="tab-revenue">Receita</TabsTrigger>
-          <TabsTrigger value="subscriptions" data-testid="tab-subscriptions">Assinaturas</TabsTrigger>
-          <TabsTrigger value="churn" data-testid="tab-churn">Churn Analysis</TabsTrigger>
-          <TabsTrigger value="tenants" data-testid="tab-tenants">Top Clientes</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tenants">Tenant Management</TabsTrigger>
+          <TabsTrigger value="billing">Billing & Payments</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="revenue" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Revenue Trend Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Evolução da Receita</CardTitle>
+                <CardTitle>Revenue Trend</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={data.monthlyRevenue}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis tickFormatter={(value) => `R$ ${value/1000}k`} />
-                    <Tooltip 
-                      formatter={(value) => [formatCurrency(Number(value)), 'Receita']}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  {revenueData?.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-16">{item.month}</span>
+                        <div className="flex-1">
+                          <Progress value={(item.revenue / 50000) * 100} className="h-2" />
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{formatCurrency(item.revenue)}</p>
+                        <div className="flex items-center gap-1">
+                          {getGrowthIcon(item.growth)}
+                          <span className={`text-xs ${item.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {item.growth.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
+            {/* Key Metrics */}
             <Card>
               <CardHeader>
-                <CardTitle>Distribuição por Plano</CardTitle>
+                <CardTitle>Key Performance Indicators</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={data.planDistribution}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="revenue"
-                      label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
-                    >
-                      {data.planDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Churn Rate</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold">{financialMetrics?.churnRate}%</span>
+                      <Progress value={financialMetrics?.churnRate || 0} className="h-2 w-20 mt-1" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Customer LTV</span>
+                    <span className="text-lg font-bold">{formatCurrency(financialMetrics?.lifetimeValue || 0)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Total Tenants</span>
+                    <span className="text-lg font-bold">{financialMetrics?.totalTenants}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Annual Revenue</span>
+                    <span className="text-lg font-bold">{formatCurrency(financialMetrics?.annualRevenue || 0)}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="subscriptions" className="space-y-4">
+        {/* Tenant Management Tab */}
+        <TabsContent value="tenants" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Crescimento de Assinaturas</CardTitle>
+              <CardTitle>Tenant Financial Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={data.monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar 
-                    dataKey="subscriptions" 
-                    fill="hsl(var(--primary))" 
-                    name="Assinaturas"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="churn" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análise de Churn</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={data.churnAnalysis}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="churn" orientation="left" />
-                  <YAxis yAxisId="count" orientation="right" />
-                  <Tooltip />
-                  <Line 
-                    yAxisId="churn"
-                    type="monotone" 
-                    dataKey="churn" 
-                    stroke="hsl(var(--destructive))" 
-                    name="Taxa de Churn (%)"
-                  />
-                  <Bar 
-                    yAxisId="count"
-                    dataKey="signups" 
-                    fill="hsl(var(--primary))" 
-                    name="Novos Signups"
-                  />
-                  <Bar 
-                    yAxisId="count"
-                    dataKey="cancellations" 
-                    fill="hsl(var(--destructive))" 
-                    name="Cancelamentos"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tenants" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Clientes por Receita</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {data.topTenants.map((tenant, index) => (
-                  <div key={tenant.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h4 className="font-medium" data-testid={`tenant-name-${index}`}>{tenant.name}</h4>
-                        <Badge variant="outline">{tenant.plan}</Badge>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium" data-testid={`tenant-mrr-${index}`}>
-                        {formatCurrency(tenant.mrr)}/mês
-                      </div>
-                      <div className={`text-sm ${tenant.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatPercentage(tenant.growth)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4">Tenant</th>
+                      <th className="text-left p-4">Plan</th>
+                      <th className="text-left p-4">Monthly Revenue</th>
+                      <th className="text-left p-4">Annual Revenue</th>
+                      <th className="text-left p-4">Status</th>
+                      <th className="text-left p-4">Next Billing</th>
+                      <th className="text-left p-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenantsData?.map((tenant) => (
+                      <tr key={tenant.tenantId} className="border-b hover:bg-gray-50">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-gray-100 p-2 rounded">
+                              <Building className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{tenant.tenantName}</p>
+                              <p className="text-sm text-muted-foreground">{tenant.tenantId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="outline">{tenant.plan}</Badge>
+                        </td>
+                        <td className="p-4 font-medium">
+                          {formatCurrency(tenant.monthlyRevenue)}
+                        </td>
+                        <td className="p-4 font-medium">
+                          {formatCurrency(tenant.annualRevenue)}
+                        </td>
+                        <td className="p-4">
+                          {getStatusBadge(tenant.billingStatus)}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">
+                              {tenant.nextBillingDate.toLocaleDateString()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedTenant(tenant.tenantId)}
+                              data-testid={`button-view-tenant-${tenant.tenantId}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              data-testid={`button-manage-tenant-${tenant.tenantId}`}
+                            >
+                              Manage
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Billing & Payments Tab */}
+        <TabsContent value="billing" className="space-y-6">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Active Payments</span>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="font-bold">124</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Overdue Payments</span>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <span className="font-bold">3</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Failed Payments</span>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <span className="font-bold">1</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div>
+                      <p className="font-medium">TechCorp Solutions</p>
+                      <p className="text-sm text-muted-foreground">Enterprise Plan</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(2500)}</p>
+                      <p className="text-sm text-green-600">Paid</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div>
+                      <p className="font-medium">StartupXYZ</p>
+                      <p className="text-sm text-muted-foreground">Professional Plan</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(99)}</p>
+                      <p className="text-sm text-green-600">Paid</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded">
+                    <div>
+                      <p className="font-medium">BigCorp Inc</p>
+                      <p className="text-sm text-muted-foreground">Enterprise Plus</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(5000)}</p>
+                      <p className="text-sm text-red-600">Overdue</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Plan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Enterprise Plus</span>
+                    <div className="flex items-center gap-2">
+                      <Progress value={60} className="h-2 w-20" />
+                      <span className="font-medium">60%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Enterprise</span>
+                    <div className="flex items-center gap-2">
+                      <Progress value={25} className="h-2 w-20" />
+                      <span className="font-medium">25%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Professional</span>
+                    <div className="flex items-center gap-2">
+                      <Progress value={15} className="h-2 w-20" />
+                      <span className="font-medium">15%</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Growth Forecast</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Next Month</span>
+                    <span className="font-bold text-green-600">+8.5%</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Next Quarter</span>
+                    <span className="font-bold text-green-600">+22.3%</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Next Year</span>
+                    <span className="font-bold text-green-600">+45.7%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

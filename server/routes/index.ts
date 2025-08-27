@@ -27,7 +27,7 @@ export const registerRoutes = (app: Express): Server => {
   app.use('/api/ai', aiRoutes);
   app.use('/api/sms', smsRoutes);
   app.use('/api/knowledge-articles', knowledgeRoutes);
-  app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/billing', subscriptionRoutes);
   app.use('/api/workflows', workflowRoutes);
   app.use('/api/webhooks', webhookRoutes);
 

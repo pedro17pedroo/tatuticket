@@ -5,394 +5,608 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import {
   Slack,
   MessageSquare,
+  Globe,
   Webhook,
   Settings,
-  PlusCircle,
+  Plus,
+  Edit,
+  Trash2,
   CheckCircle,
-  XCircle,
+  AlertCircle,
   Clock,
-  ExternalLink,
-  Copy,
-  TestTube,
-  Activity
+  Activity,
+  BarChart3,
+  Zap,
+  Play,
+  Pause,
+  RefreshCw,
+  Code,
+  Key,
+  Shield,
+  ExternalLink
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock data for integrations
-const MOCK_INTEGRATIONS = [
+interface Integration {
+  id: string;
+  name: string;
+  type: 'slack' | 'teams' | 'jira' | 'webhook' | 'api';
+  config: Record<string, any>;
+  active: boolean;
+  events: string[];
+  status: 'connected' | 'error' | 'pending';
+  lastSync?: Date;
+  errorMessage?: string;
+  statistics: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    avgResponseTime: number;
+  };
+}
+
+interface Webhook {
+  id: string;
+  name: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  headers: Record<string, string>;
+  secret?: string;
+  successCount: number;
+  failureCount: number;
+  createdAt: Date;
+  lastTriggered?: Date;
+  retryPolicy: {
+    maxRetries: number;
+    backoffStrategy: 'linear' | 'exponential';
+    retryDelay: number;
+  };
+}
+
+const MOCK_INTEGRATIONS: Integration[] = [
   {
     id: '1',
-    name: 'Slack - Equipe de Suporte',
+    name: 'Main Slack Workspace',
     type: 'slack',
-    isActive: true,
-    lastSyncAt: new Date(Date.now() - 1000 * 60 * 30),
     config: {
       webhook_url: 'https://hooks.slack.com/services/xxx',
-      channel: '#suporte',
-      notifications: ['ticket_created', 'sla_breach']
+      channel: '#support',
+      botToken: 'xoxb-xxx'
     },
-    status: 'connected'
+    active: true,
+    events: ['ticket.created', 'ticket.updated', 'sla.breach'],
+    status: 'connected',
+    lastSync: new Date('2025-01-26'),
+    statistics: {
+      totalRequests: 1247,
+      successfulRequests: 1198,
+      failedRequests: 49,
+      avgResponseTime: 245
+    }
   },
   {
     id: '2',
-    name: 'Microsoft Teams',
+    name: 'Development Team',
     type: 'teams',
-    isActive: true,
-    lastSyncAt: new Date(Date.now() - 1000 * 60 * 60),
     config: {
       webhook_url: 'https://outlook.office.com/webhook/xxx',
-      channel: 'Suporte TI',
-      notifications: ['ticket_assigned', 'escalation']
+      channel: 'Development Alerts'
     },
-    status: 'connected'
+    active: true,
+    events: ['ticket.escalated', 'bug.reported'],
+    status: 'connected',
+    lastSync: new Date('2025-01-25'),
+    statistics: {
+      totalRequests: 456,
+      successfulRequests: 441,
+      failedRequests: 15,
+      avgResponseTime: 320
+    }
   },
   {
     id: '3',
-    name: 'Jira - Gestão de Projetos',
+    name: 'Project Management',
     type: 'jira',
-    isActive: false,
-    lastSyncAt: null,
     config: {
-      base_url: 'https://company.atlassian.net',
-      username: 'admin@company.com',
-      project_key: 'SUP'
+      server_url: 'https://company.atlassian.net',
+      username: 'api@company.com',
+      token: 'xxx',
+      project: 'SUPPORT'
     },
-    status: 'disconnected'
-  },
-  {
-    id: '4',
-    name: 'Webhook Personalizado',
-    type: 'webhook',
-    isActive: true,
-    lastSyncAt: new Date(Date.now() - 1000 * 60 * 10),
-    config: {
-      url: 'https://api.company.com/tickets/webhook',
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer xxx' },
-      events: ['ticket_created', 'ticket_resolved']
-    },
-    status: 'connected'
+    active: false,
+    events: ['ticket.created', 'ticket.resolved'],
+    status: 'error',
+    errorMessage: 'Authentication failed. Please check credentials.',
+    statistics: {
+      totalRequests: 234,
+      successfulRequests: 180,
+      failedRequests: 54,
+      avgResponseTime: 1200
+    }
   }
 ];
 
-const INTEGRATION_TYPES = [
+const MOCK_WEBHOOKS: Webhook[] = [
   {
-    type: 'slack',
-    name: 'Slack',
-    icon: Slack,
-    description: 'Envie notificações para canais do Slack',
-    color: 'bg-purple-500'
+    id: '1',
+    name: 'External CRM Sync',
+    url: 'https://api.company.com/webhooks/tickets',
+    events: ['ticket.created', 'ticket.updated', 'ticket.resolved'],
+    active: true,
+    headers: {
+      'Authorization': 'Bearer xxx',
+      'Content-Type': 'application/json'
+    },
+    secret: 'webhook_secret_key',
+    successCount: 892,
+    failureCount: 23,
+    createdAt: new Date('2024-12-15'),
+    lastTriggered: new Date('2025-01-26'),
+    retryPolicy: {
+      maxRetries: 3,
+      backoffStrategy: 'exponential',
+      retryDelay: 1000
+    }
   },
   {
-    type: 'teams',
+    id: '2',
+    name: 'Analytics Dashboard',
+    url: 'https://analytics.company.com/api/events',
+    events: ['ticket.created', 'sla.breach'],
+    active: true,
+    headers: {
+      'X-API-Key': 'analytics_key_xxx'
+    },
+    successCount: 1567,
+    failureCount: 8,
+    createdAt: new Date('2024-11-20'),
+    lastTriggered: new Date('2025-01-25'),
+    retryPolicy: {
+      maxRetries: 5,
+      backoffStrategy: 'linear',
+      retryDelay: 2000
+    }
+  }
+];
+
+const AVAILABLE_EVENTS = [
+  'ticket.created',
+  'ticket.updated',
+  'ticket.assigned',
+  'ticket.resolved',
+  'ticket.closed',
+  'ticket.escalated',
+  'sla.breach',
+  'sla.warning',
+  'customer.created',
+  'user.login',
+  'system.alert'
+];
+
+const INTEGRATION_TEMPLATES = {
+  slack: {
+    name: 'Slack Integration',
+    description: 'Send notifications to Slack channels',
+    configFields: [
+      { name: 'webhook_url', label: 'Webhook URL', type: 'url', required: true },
+      { name: 'channel', label: 'Default Channel', type: 'text', required: true },
+      { name: 'botToken', label: 'Bot Token', type: 'password', required: false }
+    ]
+  },
+  teams: {
     name: 'Microsoft Teams',
-    icon: MessageSquare,
-    description: 'Integre com Microsoft Teams',
-    color: 'bg-blue-500'
+    description: 'Send notifications to Teams channels',
+    configFields: [
+      { name: 'webhook_url', label: 'Webhook URL', type: 'url', required: true },
+      { name: 'channel', label: 'Channel Name', type: 'text', required: true }
+    ]
   },
-  {
-    type: 'jira',
-    name: 'Jira',
-    icon: ExternalLink,
-    description: 'Sincronize tickets com Jira',
-    color: 'bg-blue-600'
-  },
-  {
-    type: 'webhook',
-    name: 'Webhook',
-    icon: Webhook,
-    description: 'Webhook personalizado para integração',
-    color: 'bg-gray-500'
+  jira: {
+    name: 'Jira Integration',
+    description: 'Create and sync issues with Jira',
+    configFields: [
+      { name: 'server_url', label: 'Jira Server URL', type: 'url', required: true },
+      { name: 'username', label: 'Username', type: 'text', required: true },
+      { name: 'token', label: 'API Token', type: 'password', required: true },
+      { name: 'project', label: 'Project Key', type: 'text', required: true }
+    ]
   }
-];
-
-const EVENT_TYPES = [
-  { value: 'ticket_created', label: 'Ticket Criado' },
-  { value: 'ticket_updated', label: 'Ticket Atualizado' },
-  { value: 'ticket_assigned', label: 'Ticket Atribuído' },
-  { value: 'ticket_resolved', label: 'Ticket Resolvido' },
-  { value: 'sla_breach', label: 'Violação de SLA' },
-  { value: 'escalation', label: 'Escalação' },
-];
+};
 
 export function AdvancedIntegrations() {
-  const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [testResults, setTestResults] = useState<Record<string, any>>({});
+  const [integrations, setIntegrations] = useState<Integration[]>(MOCK_INTEGRATIONS);
+  const [webhooks, setWebhooks] = useState<Webhook[]>(MOCK_WEBHOOKS);
+  const [editingIntegration, setEditingIntegration] = useState<Partial<Integration> | null>(null);
+  const [editingWebhook, setEditingWebhook] = useState<Partial<Webhook> | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showWebhookDialog, setShowWebhookDialog] = useState(false);
+  const [selectedIntegrationType, setSelectedIntegrationType] = useState<string>('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: integrations = MOCK_INTEGRATIONS, isLoading } = useQuery({
-    queryKey: ['/api/integrations', 'tenant-1'], // Replace with actual tenant ID
-    enabled: true,
-  });
-
-  const createIntegrationMutation = useMutation({
-    mutationFn: async (integration: any) => {
-      // Mock API call
-      return Promise.resolve({ id: Date.now().toString(), ...integration });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
-      toast({ title: 'Integração criada com sucesso!' });
-      setIsCreateDialogOpen(false);
-    },
-  });
-
-  const toggleIntegrationMutation = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      // Mock API call
-      return Promise.resolve({ id, isActive });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
-      toast({ title: 'Integração atualizada!' });
-    },
-  });
-
+  // Test integration mutation
   const testIntegrationMutation = useMutation({
     mutationFn: async (integrationId: string) => {
-      // Mock test
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return { success: true, message: 'Teste realizado com sucesso!' };
+      const response = await fetch(`/api/integrations/${integrationId}/test`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Integration test failed');
+      }
+      
+      return response.json();
     },
-    onSuccess: (result, integrationId) => {
-      setTestResults(prev => ({ ...prev, [integrationId]: result }));
-      toast({ title: 'Teste concluído!', description: result.message });
+    onSuccess: () => {
+      toast({
+        title: 'Test Successful',
+        description: 'Integration is working correctly',
+      });
     },
-    onError: (error, integrationId) => {
-      setTestResults(prev => ({ 
-        ...prev, 
-        [integrationId]: { success: false, message: 'Falha no teste' } 
-      }));
-      toast({ 
-        title: 'Erro no teste', 
-        description: 'Verifique a configuração', 
-        variant: 'destructive' 
+    onError: () => {
+      toast({
+        title: 'Test Failed',
+        description: 'There was an error testing the integration',
+        variant: 'destructive',
       });
     },
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'disconnected': return <XCircle className="w-4 h-4 text-red-500" />;
-      default: return <Clock className="w-4 h-4 text-yellow-500" />;
+  // Save integration mutation
+  const saveIntegrationMutation = useMutation({
+    mutationFn: async (integration: Partial<Integration>) => {
+      const method = integration.id ? 'PUT' : 'POST';
+      const url = integration.id ? `/api/integrations/${integration.id}` : '/api/integrations';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(integration),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save integration');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowCreateDialog(false);
+      setEditingIntegration(null);
+      toast({
+        title: 'Success',
+        description: 'Integration saved successfully',
+      });
+    },
+  });
+
+  // Save webhook mutation
+  const saveWebhookMutation = useMutation({
+    mutationFn: async (webhook: Partial<Webhook>) => {
+      const method = webhook.id ? 'PUT' : 'POST';
+      const url = webhook.id ? `/api/webhooks/${webhook.id}` : '/api/webhooks';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhook),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save webhook');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowWebhookDialog(false);
+      setEditingWebhook(null);
+      toast({
+        title: 'Success',
+        description: 'Webhook saved successfully',
+      });
+    },
+  });
+
+  const handleCreateIntegration = (type: string) => {
+    const template = INTEGRATION_TEMPLATES[type as keyof typeof INTEGRATION_TEMPLATES];
+    if (template) {
+      setEditingIntegration({
+        name: template.name,
+        type: type as any,
+        config: {},
+        active: true,
+        events: ['ticket.created'],
+        status: 'pending'
+      });
+      setSelectedIntegrationType(type);
+      setShowCreateDialog(true);
     }
   };
 
-  const getIntegrationType = (type: string) => {
-    return INTEGRATION_TYPES.find(t => t.type === type);
+  const handleSaveIntegration = () => {
+    if (!editingIntegration?.name || !editingIntegration?.type) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    saveIntegrationMutation.mutate(editingIntegration);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const handleSaveWebhook = () => {
+    if (!editingWebhook?.name || !editingWebhook?.url) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    saveWebhookMutation.mutate({
+      ...editingWebhook,
+      retryPolicy: editingWebhook.retryPolicy || {
+        maxRetries: 3,
+        backoffStrategy: 'exponential',
+        retryDelay: 1000
+      }
+    });
+  };
+
+  const getIntegrationIcon = (type: string) => {
+    switch (type) {
+      case 'slack': return <Slack className="h-5 w-5" />;
+      case 'teams': return <MessageSquare className="h-5 w-5" />;
+      case 'jira': return <Globe className="h-5 w-5" />;
+      case 'webhook': return <Webhook className="h-5 w-5" />;
+      default: return <Activity className="h-5 w-5" />;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
+      default: return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
+  };
 
   return (
-    <div className="space-y-6" data-testid="advanced-integrations">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center">
-            <Webhook className="w-8 h-8 mr-3 text-primary" />
-            Integrações Avançadas
-          </h2>
-          <p className="text-muted-foreground">
-            Conecte o TatuTicket com suas ferramentas favoritas
-          </p>
+          <h2 className="text-2xl font-bold">Advanced Integrations</h2>
+          <p className="text-muted-foreground">Connect TatuTicket with your favorite tools and services</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-integration">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Nova Integração
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Integração</DialogTitle>
-              <DialogDescription>
-                Configure uma nova integração com serviços externos
-              </DialogDescription>
-            </DialogHeader>
-            <IntegrationCreateForm 
-              onSubmit={(data) => createIntegrationMutation.mutate(data)}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
 
-      <Tabs defaultValue="active" className="space-y-4">
+      <Tabs defaultValue="integrations" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="active" data-testid="tab-active-integrations">
-            Integrações Ativas
-          </TabsTrigger>
-          <TabsTrigger value="available" data-testid="tab-available-integrations">
-            Disponíveis
-          </TabsTrigger>
-          <TabsTrigger value="webhooks" data-testid="tab-webhook-logs">
-            Logs de Webhook
-          </TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+          <TabsTrigger value="api">API Access</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="space-y-4">
-          <div className="grid gap-4">
-            {integrations.map((integration: any) => {
-              const integrationType = getIntegrationType(integration.type);
-              const testResult = testResults[integration.id];
-              
-              return (
-                <Card key={integration.id} className="relative">
+        {/* Integrations Tab */}
+        <TabsContent value="integrations" className="space-y-6">
+          {/* Quick Setup */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Setup</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleCreateIntegration('slack')}>
+                  <CardContent className="p-6 text-center">
+                    <Slack className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+                    <h3 className="font-semibold mb-2">Slack</h3>
+                    <p className="text-sm text-muted-foreground">Send notifications to Slack channels</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleCreateIntegration('teams')}>
+                  <CardContent className="p-6 text-center">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-purple-600" />
+                    <h3 className="font-semibold mb-2">Microsoft Teams</h3>
+                    <p className="text-sm text-muted-foreground">Connect with Teams channels</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleCreateIntegration('jira')}>
+                  <CardContent className="p-6 text-center">
+                    <Globe className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+                    <h3 className="font-semibold mb-2">Jira</h3>
+                    <p className="text-sm text-muted-foreground">Sync issues with Jira projects</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Integrations */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Active Integrations</h3>
+              <Button onClick={() => setShowCreateDialog(true)} data-testid="button-create-integration">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Integration
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {integrations.map((integration) => (
+                <Card key={integration.id}>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg ${integrationType?.color} flex items-center justify-center text-white`}>
-                          {integrationType?.icon && <integrationType.icon className="w-5 h-5" />}
-                        </div>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        {getIntegrationIcon(integration.type)}
                         <div>
-                          <CardTitle className="text-lg" data-testid={`integration-name-${integration.id}`}>
-                            {integration.name}
-                          </CardTitle>
-                          <p className="text-sm text-muted-foreground flex items-center">
+                          <CardTitle className="text-lg">{integration.name}</CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
                             {getStatusIcon(integration.status)}
-                            <span className="ml-1">
-                              {integration.status === 'connected' ? 'Conectado' : 'Desconectado'}
-                            </span>
-                            {integration.lastSyncAt && (
-                              <span className="ml-2">
-                                • Último sync: {integration.lastSyncAt.toLocaleString('pt-BR')}
-                              </span>
-                            )}
-                          </p>
+                            <span className="text-sm text-muted-foreground capitalize">{integration.status}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {testResult && (
-                          <Badge variant={testResult.success ? 'default' : 'destructive'}>
-                            {testResult.success ? 'Teste OK' : 'Teste Falhou'}
-                          </Badge>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => testIntegrationMutation.mutate(integration.id)}
-                          disabled={testIntegrationMutation.isPending}
-                          data-testid={`button-test-${integration.id}`}
-                        >
-                          <TestTube className="w-4 h-4 mr-1" />
-                          {testIntegrationMutation.isPending ? 'Testando...' : 'Testar'}
-                        </Button>
-                        <Switch
-                          checked={integration.isActive}
-                          onCheckedChange={(checked) => 
-                            toggleIntegrationMutation.mutate({ 
-                              id: integration.id, 
-                              isActive: checked 
-                            })
-                          }
-                          data-testid={`switch-integration-${integration.id}`}
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedIntegration(integration)}
-                          data-testid={`button-config-${integration.id}`}
-                        >
-                          <Settings className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Switch checked={integration.active} />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {integration.type === 'slack' && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium">Canal:</span>
-                          <Badge variant="outline">{integration.config.channel}</Badge>
+                    <div className="space-y-4">
+                      {integration.errorMessage && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-700">{integration.errorMessage}</p>
                         </div>
                       )}
-                      {integration.type === 'webhook' && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium">URL:</span>
-                          <code className="text-sm bg-muted px-2 py-1 rounded">
-                            {integration.config.url}
-                          </code>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigator.clipboard.writeText(integration.config.url)}
-                          >
-                            <Copy className="w-3 h-3" />
-                          </Button>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Events:</span>
+                          <p className="font-medium">{integration.events.length}</p>
                         </div>
-                      )}
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium">Eventos:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {(integration.config.notifications || integration.config.events || []).map((event: string, index: number) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {EVENT_TYPES.find(e => e.value === event)?.label || event}
-                            </Badge>
-                          ))}
+                        <div>
+                          <span className="text-muted-foreground">Success Rate:</span>
+                          <p className="font-medium">
+                            {integration.statistics.totalRequests > 0
+                              ? Math.round((integration.statistics.successfulRequests / integration.statistics.totalRequests) * 100)
+                              : 0}%
+                          </p>
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Response Time</span>
+                          <span>{integration.statistics.avgResponseTime}ms</span>
+                        </div>
+                        <Progress 
+                          value={Math.min(integration.statistics.avgResponseTime / 10, 100)} 
+                          className="h-2"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => testIntegrationMutation.mutate(integration.id)}
+                          disabled={testIntegrationMutation.isPending}
+                          data-testid={`button-test-integration-${integration.id}`}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Test
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingIntegration(integration);
+                            setSelectedIntegrationType(integration.type);
+                            setShowCreateDialog(true);
+                          }}
+                          data-testid={`button-edit-integration-${integration.id}`}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="available" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {INTEGRATION_TYPES.map((type) => (
-              <Card key={type.type} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-12 h-12 rounded-lg ${type.color} flex items-center justify-center text-white`}>
-                      <type.icon className="w-6 h-6" />
-                    </div>
+        {/* Webhooks Tab */}
+        <TabsContent value="webhooks" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Webhooks</h3>
+              <p className="text-sm text-muted-foreground">Send HTTP requests when events occur</p>
+            </div>
+            <Button onClick={() => setShowWebhookDialog(true)} data-testid="button-create-webhook">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Webhook
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {webhooks.map((webhook) => (
+              <Card key={webhook.id}>
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-medium">{type.name}</h3>
-                      <p className="text-sm text-muted-foreground">{type.description}</p>
+                      <div className="flex items-center gap-3 mb-2">
+                        <Webhook className="h-5 w-5" />
+                        <h4 className="font-semibold">{webhook.name}</h4>
+                        <Badge variant={webhook.active ? "default" : "secondary"}>
+                          {webhook.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mb-3">{webhook.url}</p>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Events:</span>
+                          <p className="font-medium">{webhook.events.length}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Success:</span>
+                          <p className="font-medium text-green-600">{webhook.successCount}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Failed:</span>
+                          <p className="font-medium text-red-600">{webhook.failureCount}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Last Triggered:</span>
+                          <p className="font-medium">
+                            {webhook.lastTriggered 
+                              ? webhook.lastTriggered.toLocaleDateString()
+                              : 'Never'
+                            }
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <Button 
-                      onClick={() => {
-                        setSelectedIntegration({ type: type.type });
-                        setIsCreateDialogOpen(true);
-                      }}
-                      data-testid={`button-add-${type.type}`}
-                    >
-                      Adicionar
-                    </Button>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingWebhook(webhook);
+                          setShowWebhookDialog(true);
+                        }}
+                        data-testid={`button-edit-webhook-${webhook.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-testid={`button-test-webhook-${webhook.id}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -400,251 +614,208 @@ export function AdvancedIntegrations() {
           </div>
         </TabsContent>
 
-        <TabsContent value="webhooks" className="space-y-4">
-          <WebhookLogs />
+        {/* API Access Tab */}
+        <TabsContent value="api" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Code className="h-5 w-5" />
+                API Documentation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Use our REST API to integrate TatuTicket with your applications.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold mb-2">Base URL</h4>
+                    <code className="text-sm bg-gray-100 p-2 rounded block">
+                      https://api.tatuticket.com/v1
+                    </code>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold mb-2">Authentication</h4>
+                    <code className="text-sm bg-gray-100 p-2 rounded block">
+                      Authorization: Bearer YOUR_API_KEY
+                    </code>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" data-testid="button-view-api-docs">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Documentation
+                </Button>
+                <Button variant="outline" data-testid="button-generate-api-key">
+                  <Key className="h-4 w-4 mr-2" />
+                  Generate API Key
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Integration Detail Dialog */}
-      {selectedIntegration && !isCreateDialogOpen && (
-        <IntegrationDetailDialog 
-          integration={selectedIntegration}
-          onClose={() => setSelectedIntegration(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-// Integration Create Form Component
-function IntegrationCreateForm({ onSubmit }: { onSubmit: (data: any) => void }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    config: {},
-    isActive: true,
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="integration-type">Tipo de Integração</Label>
-        <Select
-          value={formData.type}
-          onValueChange={(value) => setFormData({ ...formData, type: value })}
-        >
-          <SelectTrigger data-testid="select-integration-type">
-            <SelectValue placeholder="Selecione o tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            {INTEGRATION_TYPES.map((type) => (
-              <SelectItem key={type.type} value={type.type}>
-                {type.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome da Integração</Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Ex: Slack - Equipe Suporte"
-          required
-          data-testid="input-integration-name"
-        />
-      </div>
-
-      {formData.type === 'slack' && (
-        <SlackConfigForm 
-          config={formData.config}
-          onChange={(config) => setFormData({ ...formData, config })}
-        />
-      )}
-
-      {formData.type === 'webhook' && (
-        <WebhookConfigForm 
-          config={formData.config}
-          onChange={(config) => setFormData({ ...formData, config })}
-        />
-      )}
-
-      <DialogFooter>
-        <Button type="submit" data-testid="button-save-integration">
-          Criar Integração
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-}
-
-// Slack Config Form
-function SlackConfigForm({ config, onChange }: { 
-  config: any; 
-  onChange: (config: any) => void; 
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="webhook-url">Webhook URL</Label>
-        <Input
-          id="webhook-url"
-          value={config.webhook_url || ''}
-          onChange={(e) => onChange({ ...config, webhook_url: e.target.value })}
-          placeholder="https://hooks.slack.com/services/..."
-          data-testid="input-slack-webhook"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="channel">Canal</Label>
-        <Input
-          id="channel"
-          value={config.channel || ''}
-          onChange={(e) => onChange({ ...config, channel: e.target.value })}
-          placeholder="#suporte"
-          data-testid="input-slack-channel"
-        />
-      </div>
-    </div>
-  );
-}
-
-// Webhook Config Form
-function WebhookConfigForm({ config, onChange }: { 
-  config: any; 
-  onChange: (config: any) => void; 
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="webhook-url">URL do Webhook</Label>
-        <Input
-          id="webhook-url"
-          value={config.url || ''}
-          onChange={(e) => onChange({ ...config, url: e.target.value })}
-          placeholder="https://api.exemplo.com/webhook"
-          data-testid="input-webhook-url"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="method">Método HTTP</Label>
-        <Select
-          value={config.method || 'POST'}
-          onValueChange={(value) => onChange({ ...config, method: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="POST">POST</SelectItem>
-            <SelectItem value="PUT">PUT</SelectItem>
-            <SelectItem value="PATCH">PATCH</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
-}
-
-// Webhook Logs Component
-function WebhookLogs() {
-  const mockLogs = [
-    {
-      id: '1',
-      integrationName: 'Slack - Suporte',
-      event: 'ticket_created',
-      status: 'success',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      responseTime: 150
-    },
-    {
-      id: '2',
-      integrationName: 'Webhook Personalizado',
-      event: 'ticket_resolved',
-      status: 'failed',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15),
-      error: '404 Not Found',
-      responseTime: 5000
-    },
-    {
-      id: '3',
-      integrationName: 'Microsoft Teams',
-      event: 'sla_breach',
-      status: 'success',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-      responseTime: 320
-    }
-  ];
-
-  return (
-    <div className="space-y-4">
-      {mockLogs.map((log) => (
-        <Card key={log.id}>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {log.status === 'success' ? (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-500" />
-                )}
-                <div>
-                  <h4 className="font-medium" data-testid={`log-integration-${log.id}`}>
-                    {log.integrationName}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {EVENT_TYPES.find(e => e.value === log.event)?.label}
-                  </p>
-                  {log.error && (
-                    <p className="text-sm text-red-600">{log.error}</p>
-                  )}
-                </div>
+      {/* Create/Edit Integration Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingIntegration?.id ? 'Edit Integration' : 'Create Integration'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingIntegration && selectedIntegrationType && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="integration-name">Name</Label>
+                <Input
+                  id="integration-name"
+                  value={editingIntegration.name || ''}
+                  onChange={(e) => setEditingIntegration({
+                    ...editingIntegration,
+                    name: e.target.value
+                  })}
+                  placeholder="Enter integration name"
+                  data-testid="input-integration-name"
+                />
               </div>
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">
-                  {log.timestamp.toLocaleString('pt-BR')}
+
+              {INTEGRATION_TEMPLATES[selectedIntegrationType as keyof typeof INTEGRATION_TEMPLATES]?.configFields.map((field) => (
+                <div key={field.name}>
+                  <Label htmlFor={`config-${field.name}`}>{field.label}</Label>
+                  <Input
+                    id={`config-${field.name}`}
+                    type={field.type}
+                    value={editingIntegration.config?.[field.name] || ''}
+                    onChange={(e) => setEditingIntegration({
+                      ...editingIntegration,
+                      config: {
+                        ...editingIntegration.config,
+                        [field.name]: e.target.value
+                      }
+                    })}
+                    placeholder={`Enter ${field.label.toLowerCase()}`}
+                    data-testid={`input-config-${field.name}`}
+                  />
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {log.responseTime}ms
-                </div>
+              ))}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  data-testid="button-cancel-integration"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveIntegration}
+                  disabled={saveIntegrationMutation.isPending}
+                  data-testid="button-save-integration"
+                >
+                  {saveIntegrationMutation.isPending ? 'Saving...' : 'Save Integration'}
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
+          )}
+        </DialogContent>
+      </Dialog>
 
-// Integration Detail Dialog Component
-function IntegrationDetailDialog({ integration, onClose }: {
-  integration: any;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open={!!integration} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{integration.name}</DialogTitle>
-          <DialogDescription>Configurações da integração</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Configuração:</h4>
-            <pre className="text-sm bg-muted p-3 rounded overflow-auto">
-              {JSON.stringify(integration.config, null, 2)}
-            </pre>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Create/Edit Webhook Dialog */}
+      <Dialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingWebhook?.id ? 'Edit Webhook' : 'Create Webhook'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingWebhook && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="webhook-name">Name</Label>
+                <Input
+                  id="webhook-name"
+                  value={editingWebhook.name || ''}
+                  onChange={(e) => setEditingWebhook({
+                    ...editingWebhook,
+                    name: e.target.value
+                  })}
+                  placeholder="Enter webhook name"
+                  data-testid="input-webhook-name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="webhook-url">URL</Label>
+                <Input
+                  id="webhook-url"
+                  type="url"
+                  value={editingWebhook.url || ''}
+                  onChange={(e) => setEditingWebhook({
+                    ...editingWebhook,
+                    url: e.target.value
+                  })}
+                  placeholder="https://api.example.com/webhook"
+                  data-testid="input-webhook-url"
+                />
+              </div>
+
+              <div>
+                <Label>Events</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {AVAILABLE_EVENTS.map((event) => (
+                    <label key={event} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={editingWebhook.events?.includes(event) || false}
+                        onChange={(e) => {
+                          const currentEvents = editingWebhook.events || [];
+                          const newEvents = e.target.checked
+                            ? [...currentEvents, event]
+                            : currentEvents.filter(ev => ev !== event);
+                          
+                          setEditingWebhook({
+                            ...editingWebhook,
+                            events: newEvents
+                          });
+                        }}
+                        data-testid={`checkbox-event-${event}`}
+                      />
+                      <span className="text-sm">{event}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowWebhookDialog(false)}
+                  data-testid="button-cancel-webhook"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveWebhook}
+                  disabled={saveWebhookMutation.isPending}
+                  data-testid="button-save-webhook"
+                >
+                  {saveWebhookMutation.isPending ? 'Saving...' : 'Save Webhook'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

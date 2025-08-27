@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlobalUserManagement } from "@/components/admin/global-user-management";
+import { FinancialDashboard } from "@/components/admin/FinancialDashboard";
 import type { NavigationItem, GlobalStats } from "@/types/portal";
 import type { Tenant, InsertTenant } from "@shared/schema";
 
@@ -242,6 +243,11 @@ export function AdminPortal() {
               <GlobalUserManagement />
             )}
 
+            {/* Financial Dashboard Tab */}
+            {activeNavItem === 'financial' && (
+              <FinancialDashboard />
+            )}
+
             {/* Tenants Tab */}
             {(activeNavItem === 'dashboard' || activeNavItem === 'tenants') && (
               <>
@@ -452,7 +458,7 @@ export function AdminPortal() {
             )}
 
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'users', 'tenants'].includes(activeNavItem) && (
+            {!['dashboard', 'users', 'tenants', 'financial'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
