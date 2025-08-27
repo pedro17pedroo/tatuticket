@@ -691,14 +691,14 @@ function PlanCards({
             <CardTitle className="text-xl">{plan.name}</CardTitle>
             <div className="space-y-1">
               <div className="text-3xl font-bold">
-                R$ {plan.price}
+                Kz {plan.price.toLocaleString()}
                 <span className="text-sm font-normal text-muted-foreground">
                   /{billingCycle === 'monthly' ? 'mês' : 'ano'}
                 </span>
               </div>
               {billingCycle === 'yearly' && (
                 <p className="text-sm text-green-600">
-                  Economize R$ {Math.round(plan.price * 12 * 0.2)} por ano
+                  Economize Kz {Math.round(plan.price * 12 * 0.2).toLocaleString()} por ano
                 </p>
               )}
             </div>
@@ -939,7 +939,7 @@ function ReviewStep({ data }: { data: OnboardingData }) {
               <strong>Plano:</strong> {selectedPlan?.name}
             </div>
             <div>
-              <strong>Valor:</strong> R$ {selectedPlan?.price}/{data.plan.billingCycle === 'monthly' ? 'mês' : 'ano'}
+              <strong>Valor:</strong> Kz {selectedPlan?.price.toLocaleString()}/{data.plan.billingCycle === 'monthly' ? 'mês' : 'ano'}
             </div>
             <div>
               <strong>Ciclo:</strong> {data.plan.billingCycle === 'monthly' ? 'Mensal' : 'Anual'}

@@ -81,7 +81,7 @@ export function AICustomerChatbot({ isOpen, onToggle, className }: AICustomerCha
       response = 'Para verificar o status dos seus tickets:\n\n1. Entre no Portal do Cliente\n2. Acesse "Meus Tickets"\n3. Veja o status em tempo real\n\nTambém enviamos notificações por email sobre atualizações!';
       suggestions = ['Criar novo ticket', 'Alterar prioridade', 'Adicionar comentário'];
     } else if (lowerInput.includes('plano') || lowerInput.includes('preço')) {
-      response = 'Nossos planos incluem:\n\n🟦 **Starter** - R$ 29/mês\n• 100 tickets/mês\n• 2 agentes\n• Suporte básico\n\n🟣 **Professional** - R$ 99/mês\n• 500 tickets/mês\n• 10 agentes\n• Automação básica\n\n🟠 **Enterprise** - R$ 249/mês\n• Tickets ilimitados\n• Agentes ilimitados\n• IA avançada';
+      response = 'Nossos planos incluem:\n\n🟦 **Starter** - Kz 14.500/mês\n• 100 tickets/mês\n• 2 agentes\n• Suporte básico\n\n🟣 **Professional** - Kz 49.500/mês\n• 500 tickets/mês\n• 10 agentes\n• Automação básica\n\n🟠 **Enterprise** - Kz 124.500/mês\n• Tickets ilimitados\n• Agentes ilimitados\n• IA avançada';
       suggestions = ['Falar com vendas', 'Comparar planos', 'Upgrade'];
     } else if (lowerInput.includes('suporte') || lowerInput.includes('ajuda')) {
       response = 'Estou aqui para ajudar! Posso auxiliar com:\n\n• Criação e gestão de tickets\n• Informações sobre planos\n• Dúvidas técnicas\n• Status de pagamentos\n\nO que você gostaria de saber?';

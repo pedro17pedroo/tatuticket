@@ -90,7 +90,7 @@ export function PricingPlans() {
     if (plan.price.monthly === 0) return "Grátis";
     const price = isYearly ? plan.price.yearly : plan.price.monthly;
     const period = isYearly ? "ano" : "mês";
-    return `R$ ${price}/${period}`;
+    return `Kz ${price.toLocaleString()}/${period}`;
   };
 
   const getSavings = (plan: PricingPlan) => {

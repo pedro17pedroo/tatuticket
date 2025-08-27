@@ -643,7 +643,7 @@ export function OnboardingWizard() {
                               <div className="text-center">
                                 <h3 className="text-xl font-bold">{plan.name}</h3>
                                 <div className="mt-2 mb-4">
-                                  <span className="text-3xl font-bold">R$ {plan.price}</span>
+                                  <span className="text-3xl font-bold">Kz {plan.price.toLocaleString()}</span>
                                   <span className="text-gray-600">/mês</span>
                                 </div>
                                 <ul className="space-y-2 text-sm">
@@ -690,11 +690,11 @@ export function OnboardingWizard() {
                                 <div className="text-center">
                                   <h3 className="text-xl font-bold">{plan.name}</h3>
                                   <div className="mt-2 mb-1">
-                                    <span className="text-3xl font-bold">R$ {monthlyEquivalent}</span>
+                                    <span className="text-3xl font-bold">Kz {monthlyEquivalent.toLocaleString()}</span>
                                     <span className="text-gray-600">/mês</span>
                                   </div>
                                   <div className="text-sm text-gray-600 mb-4">
-                                    Cobrado anualmente: R$ {yearlyPrice}
+                                    Cobrado anualmente: Kz {yearlyPrice.toLocaleString()}
                                   </div>
                                   <ul className="space-y-2 text-sm">
                                     {plan.features.map((feature, index) => (
@@ -723,10 +723,10 @@ export function OnboardingWizard() {
                     <div className="flex justify-between items-center">
                       <span>Plano {selectedPlan?.name} ({paymentInfo.billingPeriod === 'yearly' ? 'Anual' : 'Mensal'})</span>
                       <span className="font-semibold">
-                        R$ {paymentInfo.billingPeriod === 'yearly' 
+                        Kz {(paymentInfo.billingPeriod === 'yearly' 
                           ? Math.round((selectedPlan?.price || 0) * 12 * 0.8 / 12)
-                          : selectedPlan?.price
-                        }/mês
+                          : selectedPlan?.price || 0
+                        ).toLocaleString()}/mês
                       </span>
                     </div>
                     {paymentInfo.billingPeriod === 'yearly' && (

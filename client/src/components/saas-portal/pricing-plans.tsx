@@ -234,7 +234,7 @@ export function PricingPlans() {
               <div className="space-y-2">
                 <div className="flex items-baseline justify-center">
                   <span className="text-4xl font-bold text-gray-900">
-                    R${isYearly ? plan.priceYearly : plan.priceMonthly}
+                    Kz {(isYearly ? plan.priceYearly : plan.priceMonthly).toLocaleString()}
                   </span>
                   <span className="text-gray-600 ml-1">
                     /{isYearly ? 'ano' : 'mês'}
@@ -242,7 +242,7 @@ export function PricingPlans() {
                 </div>
                 {isYearly && (
                   <p className="text-sm text-green-600">
-                    Economize R${(plan.priceMonthly * 12) - plan.priceYearly} por ano
+                    Economize Kz {((plan.priceMonthly * 12) - plan.priceYearly).toLocaleString()} por ano
                   </p>
                 )}
               </div>
