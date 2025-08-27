@@ -1,14 +1,25 @@
 import { Request, Response } from 'express';
 import { catchAsync } from '../middlewares';
-// import { aiService } from '../integrations';
+import { aiService } from '../integrations/ai.integration';
 
 export class AIController {
   static analyzeTicket = catchAsync(async (req: Request, res: Response) => {
     const { content, subject, category } = req.body;
     
     try {
-      // const analysis = await aiService.analyzeTicket(content, subject, category);
-      throw new Error('AI service not available'); // Force fallback for now
+      const analysis = await aiService.analyzeTicket(subject, content);
+      res.json({
+        success: true,
+        analysis: {
+          sentiment: analysis.sentiment || 'neutral',
+          priority: analysis.priority || 'medium',
+          category: analysis.category || category,
+          suggestedResponse: analysis.suggestedResponse,
+          confidence: analysis.confidence || 0.8,
+          keywords: analysis.keywords || [],
+          escalationRecommended: analysis.escalationRecommended || false
+        }
+      });
     } catch (error) {
       console.warn('AI service not available, using fallback analysis');
       res.json({
@@ -31,8 +42,14 @@ export class AIController {
     const { message, context, history } = req.body;
     
     try {
-      // const response = await aiService.generateChatResponse(message, context, history);
-      throw new Error('AI service not available'); // Force fallback for now
+      const response = await aiService.generateChatResponse(message, context, history);
+      res.json({
+        success: true,
+        response: response.text,
+        type: response.type || 'text',
+        actions: response.actions || [],
+        confidence: response.confidence || 0.8
+      });
     } catch (error) {
       console.warn('AI chat not available, using fallback responses');
       res.json({
@@ -50,8 +67,14 @@ export class AIController {
     const { context, userProfile } = req.query;
     
     try {
-      // const suggestions = await aiService.generateSuggestions(context as string, userProfile as string);
-      throw new Error('AI service not available'); // Force fallback for now
+      const suggestions = await aiService.generateSuggestions(
+        context as string, 
+        userProfile as string
+      );
+      res.json({
+        success: true,
+        suggestions: suggestions
+      });
     } catch (error) {
       res.json({
         success: true,
@@ -65,8 +88,14 @@ export class AIController {
     const { timeframe, tenantId } = req.query;
     
     try {
-      // const insights = await aiService.generateInsights(timeframe as string, tenantId as string);
-      throw new Error('AI service not available'); // Force fallback for now
+      const insights = await aiService.generateInsights(
+        timeframe as string,
+        tenantId as string
+      );
+      res.json({
+        success: true,
+        insights: insights
+      });
     } catch (error) {
       res.json({
         success: true,
@@ -80,8 +109,13 @@ export class AIController {
     const { subject, content } = req.body;
     
     try {
-      // const category = await aiService.categorizeTicket(subject, content);
-      throw new Error('AI service not available'); // Force fallback for now
+      const category = await aiService.categorizeTicket(subject, content);
+      res.json({
+        success: true,
+        category: category.name,
+        confidence: category.confidence,
+        subcategory: category.subcategory
+      });
     } catch (error) {
       const fallbackCategory = determineCategoryFallback(subject, content);
       res.json({
@@ -127,7 +161,7 @@ function extractKeywords(content: string): string[] {
     .filter(word => word.length > 3 && !commonWords.includes(word))
     .slice(0, 5);
   
-  return [...new Set(words)];
+  return Array.from(new Set(words));
 }
 
 function shouldEscalate(content: string): boolean {

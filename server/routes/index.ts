@@ -10,6 +10,7 @@ import paymentRoutes from './payment.routes';
 import aiRoutes from './ai.routes';
 import smsRoutes from './sms.routes';
 import knowledgeRoutes from '../controllers/knowledge.controller';
+import webhookRoutes from './webhook.routes';
 
 export const registerRoutes = (app: Express): Server => {
   // Apply request logging middleware only to API routes
@@ -24,6 +25,7 @@ export const registerRoutes = (app: Express): Server => {
   app.use('/api/ai', aiRoutes);
   app.use('/api/sms', smsRoutes);
   app.use('/api/knowledge-articles', knowledgeRoutes);
+  app.use('/api/webhooks', webhookRoutes);
 
   // Create HTTP server
   const httpServer = createServer(app);

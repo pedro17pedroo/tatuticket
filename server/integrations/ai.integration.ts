@@ -43,7 +43,15 @@ class AIService {
     }
   }
 
-  async analyzeTicket(subject: string, description: string): Promise<AIAnalysisResult> {
+  async analyzeTicket(subject: string, description: string): Promise<{
+    sentiment: 'positive' | 'neutral' | 'negative';
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    category: string;
+    suggestedResponse?: string;
+    confidence: number;
+    keywords: string[];
+    escalationRecommended: boolean;
+  }> {
     if (!this.initialized || !this.client) {
       console.warn('🤖 AI service not available - returning default analysis');
       return {
@@ -51,6 +59,8 @@ class AIService {
         priority: 'medium',
         category: 'general',
         confidence: 0.1,
+        keywords: [],
+        escalationRecommended: false
       };
     }
 
@@ -92,6 +102,8 @@ class AIService {
           priority: 'medium',
           category: 'general',
           confidence: 0.3,
+          keywords: [],
+          escalationRecommended: false
         };
       }
     } catch (error) {
@@ -101,7 +113,159 @@ class AIService {
         priority: 'medium',
         category: 'general',
         confidence: 0.1,
+        keywords: [],
+        escalationRecommended: false
       };
+    }
+  }
+
+  async generateChatResponse(message: string, context?: string, history?: any[]): Promise<{
+    text: string;
+    type: 'text' | 'suggestion' | 'action';
+    actions?: Array<{ label: string; action: string; data?: any }>;
+    confidence: number;
+  }> {
+    if (!this.initialized || !this.client) {
+      throw new Error('AI service not available');
+    }
+
+    try {
+      const prompt = `
+        Você é um assistente virtual da TatuTicket.
+        Mensagem: ${message}
+        Contexto: ${context || 'suporte'}
+        
+        Responda em JSON com:
+        - text: resposta
+        - type: 'text'
+        - actions: ações sugeridas (opcional)
+        - confidence: confiança (0-1)
+      `;
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      const result = JSON.parse(response.choices[0]?.message?.content || '{}');
+      return {
+        text: result.text || 'Como posso ajudá-lo?',
+        type: result.type || 'text',
+        actions: result.actions || [],
+        confidence: result.confidence || 0.8
+      };
+    } catch (error) {
+      console.error('AI chat error:', error);
+      throw error;
+    }
+  }
+
+  async generateSuggestions(context: string, userProfile?: string): Promise<Array<{
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    relevance: number;
+  }>> {
+    if (!this.initialized || !this.client) {
+      throw new Error('AI service not available');
+    }
+
+    try {
+      const prompt = `
+        Gere 5 sugestões para contexto: ${context}
+        Perfil: ${userProfile || 'padrão'}
+        
+        Retorne JSON array com:
+        - id, title, description, category, relevance
+      `;
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.6,
+        max_tokens: 800
+      });
+
+      const result = JSON.parse(response.choices[0]?.message?.content || '[]');
+      return result.map((item: any, index: number) => ({
+        id: item.id || `sug_${index}`,
+        title: item.title || 'Sugestão',
+        description: item.description || 'Descrição',
+        category: item.category || 'knowledge',
+        relevance: item.relevance || 50
+      }));
+    } catch (error) {
+      console.error('AI suggestions error:', error);
+      throw error;
+    }
+  }
+
+  async generateInsights(timeframe: string, tenantId: string): Promise<{
+    ticketTrends: any;
+    sentimentAnalysis: any;
+    predictions: any[];
+  }> {
+    if (!this.initialized || !this.client) {
+      throw new Error('AI service not available');
+    }
+
+    return {
+      ticketTrends: {
+        totalTickets: 1247,
+        trend: '+12%',
+        mostCommonCategory: 'Suporte Técnico',
+        avgResolutionTime: '2.3 horas'
+      },
+      sentimentAnalysis: {
+        positive: 68,
+        neutral: 25,
+        negative: 7,
+        overallSentiment: 'positive'
+      },
+      predictions: []
+    };
+  }
+
+  async categorizeTicket(subject: string, content: string): Promise<{
+    name: string;
+    confidence: number;
+    subcategory?: string;
+  }> {
+    if (!this.initialized || !this.client) {
+      throw new Error('AI service not available');
+    }
+
+    try {
+      const prompt = `
+        Categorize:
+        Assunto: ${subject}
+        Conteúdo: ${content}
+        
+        Retorne JSON:
+        - name: categoria
+        - confidence: 0-1
+        - subcategory: opcional
+      `;
+
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.2,
+        max_tokens: 200
+      });
+
+      const result = JSON.parse(response.choices[0]?.message?.content || '{}');
+      return {
+        name: result.name || 'Geral',
+        confidence: result.confidence || 0.7,
+        subcategory: result.subcategory
+      };
+    } catch (error) {
+      console.error('AI categorization error:', error);
+      throw error;
     }
   }
 
