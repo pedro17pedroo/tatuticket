@@ -114,13 +114,14 @@ export function StripePaymentForm({ selectedPlan, onSuccess, onCancel }: StripeP
     }
 
     // Create subscription
-    const response = await apiRequest('/api/payments/create-subscription', 'POST', {
+    const apiResponse = await apiRequest('POST', '/api/payments/create-subscription', {
       email: formData.email,
       planId: selectedPlan.id,
       companyName: formData.companyName,
       paymentMethodId: paymentMethod.id,
       billingInfo: formData
     });
+    const response = await apiResponse.json();
 
     if (response.requiresAction) {
       // Handle 3D Secure
@@ -147,12 +148,13 @@ export function StripePaymentForm({ selectedPlan, onSuccess, onCancel }: StripeP
   };
 
   const handleBoletoPayment = async () => {
-    const response = await apiRequest('/api/payments/create-boleto', 'POST', {
+    const apiResponse = await apiRequest('POST', '/api/payments/create-boleto', {
       email: formData.email,
       planId: selectedPlan.id,
       companyName: formData.companyName,
       billingInfo: formData
     });
+    const response = await apiResponse.json();
 
     if (response.boletoUrl) {
       // Open boleto in new window
@@ -171,12 +173,13 @@ export function StripePaymentForm({ selectedPlan, onSuccess, onCancel }: StripeP
   };
 
   const handlePixPayment = async () => {
-    const response = await apiRequest('/api/payments/create-pix', 'POST', {
+    const apiResponse = await apiRequest('POST', '/api/payments/create-pix', {
       email: formData.email,
       planId: selectedPlan.id,
       companyName: formData.companyName,
       billingInfo: formData
     });
+    const response = await apiResponse.json();
 
     if (response.pixQrCode) {
       // Show PIX QR code in modal/alert

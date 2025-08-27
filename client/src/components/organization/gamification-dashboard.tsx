@@ -259,7 +259,10 @@ export function GamificationDashboard() {
         {/* Conquistas e Badges */}
         <TabsContent value="badges">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...new Set(mockAgents.flatMap(agent => agent.badges))].map((badge) => (
+            {Array.from(new Set(mockAgents.flatMap(agent => agent.badges.map(b => b.id)))).map(badgeId => {
+              const badge = mockAgents.flatMap(agent => agent.badges).find(b => b.id === badgeId);
+              if (!badge) return null;
+              return (
               <Card key={badge.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4 text-center">
                   <div className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center ${getRarityColor(badge.rarity)}`}>
@@ -274,7 +277,8 @@ export function GamificationDashboard() {
                   </Badge>
                 </CardContent>
               </Card>
-            ))}
+            );
+            }).filter(Boolean)}
           </div>
         </TabsContent>
 

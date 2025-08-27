@@ -65,26 +65,27 @@ export function AIChatbot({ onCreateTicket, className = '' }: AIChatbotProps) {
 
     try {
       // Get AI suggestions for tickets
-      const suggestions = await apiRequest('/api/ai/suggest-tickets', 'POST', {
+      const response = await apiRequest('POST', '/api/ai/suggest-tickets', {
         message: currentMessage
       });
+      const suggestions = await response.json();
 
-      let response = 'Baseado na sua mensagem, identifiquei alguns possíveis problemas. Vou sugerir algumas opções:';
+      let responseText = 'Baseado na sua mensagem, identifiquei alguns possíveis problemas. Vou sugerir algumas opções:';
 
       if (suggestions && suggestions.length > 0) {
-        response += '\n\nSugestões de tickets:';
+        responseText += '\n\nSugestões de tickets:';
         suggestions.forEach((suggestion: any, index: number) => {
-          response += `\n${index + 1}. ${suggestion.title} (${suggestion.category}) - Tempo estimado: ${suggestion.estimatedTime}h`;
+          responseText += `\n${index + 1}. ${suggestion.title} (${suggestion.category}) - Tempo estimado: ${suggestion.estimatedTime}h`;
         });
-        response += '\n\nGostaria que eu crie um ticket para algum destes problemas?';
+        responseText += '\n\nGostaria que eu crie um ticket para algum destes problemas?';
       } else {
-        response = 'Entendi sua solicitação. Para melhor atendê-lo, vou criar algumas opções de ticket baseadas na sua mensagem.';
+        responseText = 'Entendi sua solicitação. Para melhor atendê-lo, vou criar algumas opções de ticket baseadas na sua mensagem.';
       }
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
+        content: responseText,
         timestamp: new Date(),
         suggestions: suggestions || []
       };
