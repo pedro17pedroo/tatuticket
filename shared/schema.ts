@@ -399,25 +399,7 @@ export interface SLAUsage {
   totalExcessCost: number;
 }
 
-export interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  date: string;
-  dueDate: string;
-  amount: number;
-  status: 'paid' | 'pending' | 'overdue';
-  description: string;
-  paymentMethod?: string;
-  paidAt?: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  type: 'card' | 'bank_transfer';
-  last4: string;
-  brand: string;
-  isDefault: boolean;
-}
+// Note: Invoice and PaymentMethod types are defined below from database schema
 
 // Subscription and Payment Management
 export const subscriptions = pgTable("subscriptions", {
