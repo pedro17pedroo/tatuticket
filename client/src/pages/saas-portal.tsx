@@ -213,6 +213,92 @@ export function SaasPortal() {
       {/* FAQ Section */}
       <FAQSection />
 
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Company Info */}
+            <div className="col-span-1 md:col-span-1">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">T</span>
+                </div>
+                <span className="text-xl font-bold">TatuTicket</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                Revolucione sua gestão de tickets com nossa plataforma modular e inteligente.
+              </p>
+              <div className="flex space-x-4">
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <i className="fab fa-facebook-f"></i>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <i className="fab fa-twitter"></i>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <i className="fab fa-linkedin-in"></i>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <i className="fab fa-instagram"></i>
+                </a>
+              </div>
+            </div>
+
+            {/* Product Links */}
+            <div>
+              <h4 className="font-semibold mb-4">Produto</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Funcionalidades</a></li>
+                <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Preços</a></li>
+                <li><a href="/register" className="text-gray-400 hover:text-white transition-colors">Teste Grátis</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Integrações</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">API</a></li>
+              </ul>
+            </div>
+
+            {/* Support Links */}
+            <div>
+              <h4 className="font-semibold mb-4">Suporte</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#faq" className="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Documentação</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Tutoriais</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Status do Serviço</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contactar Suporte</a></li>
+              </ul>
+            </div>
+
+            {/* Company Links */}
+            <div>
+              <h4 className="font-semibold mb-4">Empresa</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sobre Nós</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Carreiras</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Imprensa</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Parceiros</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="border-t border-gray-800 mt-12 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="flex flex-col md:flex-row text-sm text-gray-400 space-y-2 md:space-y-0 md:space-x-6">
+                <span>&copy; {new Date().getFullYear()} TatuTicket. Todos os direitos reservados.</span>
+                <a href="#" className="hover:text-white transition-colors">Política de Privacidade</a>
+                <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
+                <a href="#" className="hover:text-white transition-colors">Cookies</a>
+              </div>
+              <div className="flex items-center text-sm text-gray-400 mt-4 md:mt-0">
+                <span>Feito com</span>
+                <i className="fas fa-heart text-red-500 mx-1"></i>
+                <span>em Angola</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {/* AI Customer Chatbot */}
       <AICustomerChatbot
