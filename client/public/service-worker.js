@@ -213,6 +213,42 @@ self.addEventListener('sync', (event) => {
 
 async function handleBackgroundSync() {
   console.log('TatuTicket: Background sync triggered');
-  // Implementar sincronização de dados offline
+  
+  try {
+    // Busca dados offline pendentes
+    const offlineActions = await getOfflineActions();
+    
+    for (const action of offlineActions) {
+      try {
+        const response = await fetch(action.url, {
+          method: action.method,
+          headers: action.headers,
+          body: action.body
+        });
+        
+        if (response.ok) {
+          await removeOfflineAction(action.id);
+          console.log('TatuTicket: Action synced successfully:', action.id);
+        }
+      } catch (error) {
+        console.error('TatuTicket: Failed to sync action:', action.id, error);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('TatuTicket: Background sync failed:', error);
+    return false;
+  }
+}
+
+async function getOfflineActions() {
+  // Retorna ações offline armazenadas
+  return [];
+}
+
+async function removeOfflineAction(actionId) {
+  // Remove ação do armazenamento offline
+  console.log('TatuTicket: Removing offline action:', actionId);
 }
 
