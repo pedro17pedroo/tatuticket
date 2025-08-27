@@ -6,9 +6,7 @@ const STATIC_CACHE_URLS = [
   '/saas',
   '/organization',  
   '/customer',
-  '/admin',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  '/admin'
 ];
 
 // Cache estratégico para dados críticos
@@ -362,18 +360,31 @@ async function storeOfflineAction(action) {
 
 async function openOfflineDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('TatuTicketOffline', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineActions')) {
-        const store = db.createObjectStore('offlineActions', { keyPath: 'id' });
-        store.createIndex('timestamp', 'timestamp', { unique: false });
-      }
-    };
+    try {
+      const request = indexedDB.open('TatuTicketOffline', 1);
+      
+      request.onerror = () => {
+        console.error('[SW] IndexedDB error:', request.error);
+        reject(request.error);
+      };
+      request.onsuccess = () => resolve(request.result);
+      
+      request.onupgradeneeded = (event) => {
+        try {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('offlineActions')) {
+            const store = db.createObjectStore('offlineActions', { keyPath: 'id' });
+            store.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        } catch (error) {
+          console.error('[SW] Database upgrade error:', error);
+          reject(error);
+        }
+      };
+    } catch (error) {
+      console.error('[SW] Failed to open IndexedDB:', error);
+      reject(error);
+    }
   });
 }
 

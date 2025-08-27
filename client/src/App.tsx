@@ -24,6 +24,9 @@ function Router() {
   const [currentPortal, setCurrentPortal] = useState<PortalType>('saas');
   const [showLogin, setShowLogin] = useState(false);
   const user = authService.getCurrentUser();
+  
+  // Initialize PWA
+  usePWA();
 
   // Determine current portal from URL
   useEffect(() => {

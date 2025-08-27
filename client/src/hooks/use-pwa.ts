@@ -60,7 +60,7 @@ export function usePWA() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('[PWA] Service Worker registered');
+          console.log('[PWA] Service Worker registered successfully:', registration.scope);
           setPwaState(prev => ({
             ...prev,
             serviceWorkerRegistration: registration
@@ -68,6 +68,7 @@ export function usePWA() {
         })
         .catch((error) => {
           console.error('[PWA] Service Worker registration failed:', error);
+          // Don't throw the error, just log it
         });
     }
 
