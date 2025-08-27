@@ -23,7 +23,9 @@ import {
   Building,
   Clock
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Pie, Cell } from 'recharts';
 
 interface FinancialMetrics {
   totalRevenue: number;
@@ -63,17 +65,51 @@ interface RevenueData {
   tenants: number;
 }
 
-const MOCK_FINANCIAL_METRICS: FinancialMetrics = {
-  totalRevenue: 485000,
-  monthlyRevenue: 42500,
-  annualRevenue: 510000,
-  revenueGrowth: 12.5,
-  activeTenants: 127,
-  totalTenants: 145,
-  tenantGrowth: 8.2,
-  averageRevenuePerTenant: 334.65,
-  churnRate: 3.2,
-  lifetimeValue: 8450
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+interface BillingIssue {
+  tenantId: string;
+  tenantName: string;
+  type: 'overdue' | 'failed_payment' | 'chargeback';
+  amount: number;
+  daysPastDue: number;
+  lastAttempt: Date;
+  attempts: number;
+}
+
+interface PlanAnalytics {
+  plan: string;
+  tenants: number;
+  revenue: number;
+  growth: number;
+}
+
+// Utility functions
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(amount / 100);
+};
+
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('pt-BR').format(date);
+};
+
+const apiRequest = async (url: string, options: RequestInit = {}) => {
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    ...options
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  
+  return response.json();
 };
 
 const MOCK_TENANT_DATA: TenantFinancialData[] = [
@@ -143,6 +179,10 @@ const MOCK_REVENUE_DATA: RevenueData[] = [
 export function FinancialDashboard() {
   const [timeFilter, setTimeFilter] = useState('last-6-months');
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: financialMetrics, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/financial-metrics', timeFilter],

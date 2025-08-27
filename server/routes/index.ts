@@ -13,6 +13,8 @@ import knowledgeRoutes from '../controllers/knowledge.controller';
 import webhookRoutes from './webhook.routes';
 import subscriptionRoutes from './subscription.routes';
 import workflowRoutes from './workflow.routes';
+import adminRoutes from './admin.routes';
+import aiAdvancedRoutes from './ai-advanced.routes';
 
 export const registerRoutes = (app: Express): Server => {
   // Apply request logging middleware only to API routes
@@ -30,6 +32,8 @@ export const registerRoutes = (app: Express): Server => {
   app.use('/api/billing', subscriptionRoutes);
   app.use('/api/workflows', workflowRoutes);
   app.use('/api/webhooks', webhookRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/ai-advanced', aiAdvancedRoutes);
 
   // Create HTTP server
   const httpServer = createServer(app);

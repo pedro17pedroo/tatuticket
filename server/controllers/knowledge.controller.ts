@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import { AuthRequest } from '../middlewares/auth.middleware';
 import { knowledgeService } from '../services/knowledge.service';
 import { validateBody, authenticateToken as requireAuth, requireTenant as requireTenantAccess } from '../middlewares';
 import { 
@@ -20,7 +21,7 @@ const approvalActionSchema = z.object({
 });
 
 // GET /api/knowledge-articles - Get articles by tenant
-router.get('/', requireAuth, async (req: Request, res: Response) => {
+router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user?.tenantId;
     if (!tenantId) {
@@ -36,7 +37,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 });
 
 // GET /api/knowledge-articles/:id - Get single article
-router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const article = await knowledgeService.getArticleById(id);
@@ -67,7 +68,7 @@ router.post(
   '/', 
   requireAuth, 
   validateBody(insertKnowledgeArticleSchema), 
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user?.id;
       const tenantId = req.user?.tenantId;
@@ -96,7 +97,7 @@ router.put(
   '/:id',
   requireAuth,
   validateBody(updateArticleSchema),
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
@@ -131,7 +132,7 @@ router.put(
 );
 
 // DELETE /api/knowledge-articles/:id - Delete (archive) article
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -164,7 +165,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
 });
 
 // PUT /api/knowledge-articles/:id/publish - Publish article
-router.put('/:id/publish', requireAuth, async (req: Request, res: Response) => {
+router.put('/:id/publish', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -197,7 +198,7 @@ router.put('/:id/publish', requireAuth, async (req: Request, res: Response) => {
 });
 
 // GET /api/knowledge-articles/:id/versions - Get article versions
-router.get('/:id/versions', requireAuth, async (req: Request, res: Response) => {
+router.get('/:id/versions', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -220,7 +221,7 @@ router.get('/:id/versions', requireAuth, async (req: Request, res: Response) => 
 });
 
 // POST /api/knowledge-articles/:id/submit-for-approval - Submit article for approval
-router.post('/:id/submit-for-approval', requireAuth, async (req: Request, res: Response) => {
+router.post('/:id/submit-for-approval', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -249,7 +250,7 @@ router.post('/:id/submit-for-approval', requireAuth, async (req: Request, res: R
 });
 
 // GET /api/approval-workflows - Get approval workflows
-router.get('/approval-workflows', requireAuth, async (req: Request, res: Response) => {
+router.get('/approval-workflows', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user?.tenantId;
     const { status } = req.query;
@@ -275,7 +276,7 @@ router.post(
   '/approval-workflows/:id/approve',
   requireAuth,
   validateBody(approvalActionSchema),
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { comment } = req.body;
@@ -305,7 +306,7 @@ router.post(
   '/approval-workflows/:id/reject',
   requireAuth,
   validateBody(approvalActionSchema.extend({ comment: z.string().min(1) })),
-  async (req: Request, res: Response) => {
+  async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { comment } = req.body;
