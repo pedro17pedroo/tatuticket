@@ -19,6 +19,7 @@ import aiAdvancedRoutes from './ai-advanced.routes';
 import docsRoutes from './docs.routes';
 import billingRoutes from './billing.routes';
 import apiDocsRoutes from './api-docs.routes';
+import customerRoutes from './customer.routes';
 
 export const registerRoutes = (app: Express): Server => {
   // Apply request logging middleware only to API routes
@@ -42,6 +43,9 @@ export const registerRoutes = (app: Express): Server => {
   
   // Billing Routes for excess usage
   app.use('/api/billing', billingRoutes);
+  
+  // Customer portal routes
+  app.use('/api/customer', customerRoutes);
   
   // API Documentation
   app.use('/api/docs', docsRoutes);
