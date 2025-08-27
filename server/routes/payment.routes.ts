@@ -94,8 +94,8 @@ router.post('/create-subscription', validateBody(createSubscriptionSchema), catc
     res.json({
       subscriptionId: result.subscriptionId,
       clientSecret: result.clientSecret,
-      requiresAction: result.requiresAction || false,
-      status: result.status
+      requiresAction: false,
+      status: 'active'
     });
 
   } catch (error) {

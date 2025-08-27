@@ -1,516 +1,386 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { authService } from "@/lib/auth";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Brain,
+  TrendingUp,
+  Users,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  Lightbulb,
+  BarChart3,
+  PieChart,
+  Target,
+  Zap,
+  MessageSquare,
+  ThumbsUp,
+  ThumbsDown
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 
-interface AIInsight {
-  id: string;
-  type: "prediction" | "recommendation" | "anomaly" | "sentiment";
-  title: string;
-  description: string;
-  confidence: number;
-  priority: "low" | "medium" | "high" | "critical";
-  category: string;
-  createdAt: string;
-  actionable: boolean;
-  relatedTickets?: string[];
-}
-
-interface PredictiveAnalytics {
-  ticketVolumeNext7Days: {
-    predicted: number;
-    current: number;
-    trend: "increase" | "decrease" | "stable";
-    confidence: number;
-  };
-  slaRiskTickets: {
-    count: number;
-    tickets: Array<{
-      id: string;
-      number: string;
-      subject: string;
-      riskLevel: number;
-      timeToDeadline: number;
-    }>;
-  };
-  categoryTrends: {
-    category: string;
-    trend: "increasing" | "decreasing" | "stable";
-    change: number;
-    ticketsCount: number;
-  }[];
-  customerSatisfaction: {
-    predicted: number;
-    current: number;
-    factorsInfluencing: string[];
-  };
-}
+// Mock AI Insights Data
+const MOCK_AI_INSIGHTS = {
+  sentiment: {
+    overview: {
+      positive: 68,
+      neutral: 22,
+      negative: 10,
+      trend: 'improving'
+    },
+    data: [
+      { period: 'Jan', positive: 60, neutral: 25, negative: 15 },
+      { period: 'Feb', positive: 65, neutral: 23, negative: 12 },
+      { period: 'Mar', positive: 68, neutral: 22, negative: 10 },
+    ]
+  },
+  categories: [
+    { name: 'Problemas Técnicos', count: 145, confidence: 0.92, trend: 5 },
+    { name: 'Dúvidas sobre Produto', count: 89, confidence: 0.88, trend: -3 },
+    { name: 'Problemas de Billing', count: 67, confidence: 0.95, trend: 8 },
+    { name: 'Solicitações de Feature', count: 45, confidence: 0.85, trend: 12 },
+    { name: 'Problemas de Login', count: 34, confidence: 0.91, trend: -15 }
+  ],
+  predictions: [
+    {
+      id: '1',
+      type: 'volume',
+      title: 'Aumento de tickets previsto',
+      description: 'Esperamos um aumento de 25% nos tickets na próxima semana',
+      confidence: 0.87,
+      impact: 'high',
+      suggestions: [
+        'Adicionar 2 agentes temporários',
+        'Preparar artigos de conhecimento sobre problemas comuns',
+        'Configurar automações para triagem'
+      ]
+    },
+    {
+      id: '2',
+      type: 'sla_risk',
+      title: 'Risco de violação de SLA',
+      description: '15 tickets críticos podem violar SLA nas próximas 4 horas',
+      confidence: 0.94,
+      impact: 'critical',
+      suggestions: [
+        'Escalar tickets críticos imediatamente',
+        'Notificar gerentes de equipe',
+        'Ativar modo de urgência'
+      ]
+    },
+    {
+      id: '3',
+      type: 'satisfaction',
+      title: 'Melhoria na satisfação',
+      description: 'Mudanças recentes resultaram em 15% mais avaliações positivas',
+      confidence: 0.82,
+      impact: 'positive',
+      suggestions: [
+        'Documentar as práticas que funcionaram',
+        'Aplicar melhorias em outros departamentos',
+        'Comunicar sucesso à equipe'
+      ]
+    }
+  ],
+  agentInsights: [
+    {
+      id: 'agent1',
+      name: 'Ana Silva',
+      performance: {
+        resolutionRate: 94,
+        avgResponseTime: 12,
+        satisfactionScore: 4.7,
+        trend: 'up'
+      },
+      strengths: ['Resolução rápida', 'Comunicação clara', 'Conhecimento técnico'],
+      improvements: ['Documentação de soluções', 'Follow-up proativo']
+    },
+    {
+      id: 'agent2',
+      name: 'Carlos Santos',
+      performance: {
+        resolutionRate: 87,
+        avgResponseTime: 18,
+        satisfactionScore: 4.3,
+        trend: 'stable'
+      },
+      strengths: ['Paciência com clientes', 'Atenção aos detalhes'],
+      improvements: ['Velocidade de resposta', 'Conhecimento de produto']
+    }
+  ],
+  automationOpportunities: [
+    {
+      id: '1',
+      title: 'Redefinição de senha',
+      description: '78% dos tickets de login podem ser automatizados',
+      potential: 'high',
+      effort: 'low',
+      impact: 'Redução de 156 tickets/mês'
+    },
+    {
+      id: '2',
+      title: 'Status de pedidos',
+      description: 'Consultas de status representam 45% dos tickets de billing',
+      potential: 'medium',
+      effort: 'medium',
+      impact: 'Redução de 89 tickets/mês'
+    },
+    {
+      id: '3',
+      title: 'FAQ Automatizada',
+      description: 'IA pode responder 60% das perguntas frequentes',
+      potential: 'high',
+      effort: 'high',
+      impact: 'Redução de 234 tickets/mês'
+    }
+  ]
+};
 
 export function AIInsights() {
-  const [timeRange, setTimeRange] = useState("7d");
-  const [insightFilter, setInsightFilter] = useState("all");
-  
-  const tenantId = authService.getTenantId();
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
 
-  // Fetch AI insights
-  const { data: insights = [], isLoading: insightsLoading } = useQuery<AIInsight[]>({
-    queryKey: ['/api/ai/insights', tenantId, timeRange],
-    enabled: !!tenantId,
+  const { data: insights = MOCK_AI_INSIGHTS, isLoading } = useQuery({
+    queryKey: ['/api/ai/insights', 'tenant-1', selectedTimeframe],
+    enabled: true,
   });
 
-  // Fetch predictive analytics
-  const { data: predictiveData = {
-    ticketVolumeNext7Days: { predicted: 0, current: 0, trend: 'stable' as const, confidence: 0 },
-    slaRiskTickets: { count: 0, tickets: [] },
-    categoryTrends: [],
-    customerSatisfaction: { predicted: 0, current: 0, factorsInfluencing: [] }
-  }, isLoading: predictiveLoading } = useQuery<PredictiveAnalytics>({
-    queryKey: ['/api/ai/predictive-analytics', tenantId, timeRange],
-    enabled: !!tenantId,
-  });
-
-  // Fetch sentiment analysis
-  const { data: sentimentData = {
-    overall: { score: 0, trend: 'stable' as const },
-    positive: 0,
-    neutral: 0,
-    negative: 0
-  } } = useQuery<{
-    overall: { score: number; trend: string };
-    positive: number;
-    neutral: number;
-    negative: number;
-  }>({
-    queryKey: ['/api/ai/sentiment-analysis', tenantId, timeRange],
-    enabled: !!tenantId,
-  });
-
-  const filteredInsights = insights.filter((insight: AIInsight) => {
-    if (insightFilter === "all") return true;
-    return insight.type === insightFilter;
-  });
-
-  const getInsightTypeIcon = (type: string) => {
-    switch (type) {
-      case 'prediction': return 'fa-crystal-ball';
-      case 'recommendation': return 'fa-lightbulb';
-      case 'anomaly': return 'fa-exclamation-triangle';
-      case 'sentiment': return 'fa-heart';
-      default: return 'fa-chart-line';
-    }
-  };
-
-  const getInsightTypeColor = (type: string) => {
-    switch (type) {
-      case 'prediction': return 'bg-purple-100 text-purple-800';
-      case 'recommendation': return 'bg-blue-100 text-blue-800';
-      case 'anomaly': return 'bg-orange-100 text-orange-800';
-      case 'sentiment': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'increase':
-      case 'increasing': return 'fa-arrow-up text-red-600';
-      case 'decrease':
-      case 'decreasing': return 'fa-arrow-down text-green-600';
-      case 'stable': return 'fa-minus text-gray-600';
-      default: return 'fa-minus text-gray-600';
-    }
-  };
-
-  if (insightsLoading || predictiveLoading) {
+  if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <i className="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-          <span className="ml-3 text-gray-600">Analisando dados com IA...</span>
-        </div>
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6" data-testid="ai-insights">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Insights de IA</h1>
-          <p className="text-gray-600">Análises preditivas e recomendações inteligentes</p>
+          <h2 className="text-3xl font-bold tracking-tight flex items-center">
+            <Brain className="w-8 h-8 mr-3 text-primary" />
+            Insights de IA
+          </h2>
+          <p className="text-muted-foreground">
+            Análises inteligentes para otimizar seu suporte
+          </p>
         </div>
-        
-        <div className="flex items-center space-x-4">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40" data-testid="select-time-range">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Últimas 24h</SelectItem>
-              <SelectItem value="7d">Últimos 7 dias</SelectItem>
-              <SelectItem value="30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="90d">Últimos 90 dias</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button variant="outline" data-testid="button-refresh-insights">
-            <i className="fas fa-sync mr-2"></i>
-            Atualizar
-          </Button>
+        <div className="flex space-x-2">
+          {['7d', '30d', '90d'].map((period) => (
+            <Button
+              key={period}
+              variant={selectedTimeframe === period ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedTimeframe(period)}
+              data-testid={`button-timeframe-${period}`}
+            >
+              {period === '7d' ? '7 dias' : period === '30d' ? '30 dias' : '90 dias'}
+            </Button>
+          ))}
         </div>
       </div>
 
-      <Tabs defaultValue="insights" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="insights" data-testid="tab-insights">
-            <i className="fas fa-lightbulb mr-2"></i>
-            Insights
-          </TabsTrigger>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm font-medium">Sentimento Geral</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {insights.sentiment.overview.positive}%
+                </p>
+                <p className="text-xs text-muted-foreground">Positivo</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="w-5 h-5 text-purple-500" />
+              <div>
+                <p className="text-sm font-medium">Categorias Detectadas</p>
+                <p className="text-2xl font-bold">{insights.categories.length}</p>
+                <p className="text-xs text-muted-foreground">Automáticas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Target className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-sm font-medium">Previsões Ativas</p>
+                <p className="text-2xl font-bold">{insights.predictions.length}</p>
+                <p className="text-xs text-muted-foreground">Críticas: 1</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Zap className="w-5 h-5 text-yellow-500" />
+              <div>
+                <p className="text-sm font-medium">Automação</p>
+                <p className="text-2xl font-bold">
+                  {insights.automationOpportunities.reduce((acc, opp) => 
+                    acc + parseInt(opp.impact.split(' ')[1] || '0'), 0
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">Tickets/mês</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="predictions" className="space-y-4">
+        <TabsList>
           <TabsTrigger value="predictions" data-testid="tab-predictions">
-            <i className="fas fa-crystal-ball mr-2"></i>
-            Predições
+            Previsões
           </TabsTrigger>
           <TabsTrigger value="sentiment" data-testid="tab-sentiment">
-            <i className="fas fa-heart mr-2"></i>
-            Sentimento
+            Análise de Sentimento
+          </TabsTrigger>
+          <TabsTrigger value="categories" data-testid="tab-categories">
+            Categorização
+          </TabsTrigger>
+          <TabsTrigger value="agents" data-testid="tab-agent-insights">
+            Performance de Agentes
           </TabsTrigger>
           <TabsTrigger value="automation" data-testid="tab-automation">
-            <i className="fas fa-robot mr-2"></i>
-            Automação
+            Oportunidades
           </TabsTrigger>
         </TabsList>
 
-        {/* AI Insights Tab */}
-        <TabsContent value="insights" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Insights Recentes ({filteredInsights.length})</h2>
-            <Select value={insightFilter} onValueChange={setInsightFilter}>
-              <SelectTrigger className="w-48" data-testid="select-insight-filter">
-                <SelectValue placeholder="Filtrar por tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="prediction">Predições</SelectItem>
-                <SelectItem value="recommendation">Recomendações</SelectItem>
-                <SelectItem value="anomaly">Anomalias</SelectItem>
-                <SelectItem value="sentiment">Sentimento</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-4">
-            {filteredInsights.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <i className="fas fa-robot text-4xl text-gray-300 mb-4"></i>
-                    <p className="text-lg font-medium text-gray-600 mb-2">
-                      Nenhum insight disponível
-                    </p>
-                    <p className="text-gray-500">
-                      A IA está coletando dados para gerar insights. Volte em breve.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredInsights.map((insight: AIInsight) => (
-                <Card key={insight.id} className="hover:shadow-md transition-shadow" data-testid={`insight-${insight.id}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <div className="p-3 bg-gray-100 rounded-full">
-                          <i className={`fas ${getInsightTypeIcon(insight.type)} text-gray-600`}></i>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="font-semibold text-gray-900">{insight.title}</h3>
-                            <Badge className={getInsightTypeColor(insight.type)}>
-                              {insight.type}
-                            </Badge>
-                            <Badge className={getPriorityColor(insight.priority)}>
-                              {insight.priority}
-                            </Badge>
-                          </div>
-                          
-                          <p className="text-gray-600 mb-3">{insight.description}</p>
-                          
-                          <div className="flex items-center space-x-6 text-sm text-gray-500">
-                            <span>
-                              <i className="fas fa-chart-bar mr-1"></i>
-                              Confiança: {insight.confidence}%
-                            </span>
-                            <span>
-                              <i className="fas fa-tag mr-1"></i>
-                              {insight.category}
-                            </span>
-                            <span>
-                              <i className="fas fa-clock mr-1"></i>
-                              {formatDate(insight.createdAt)}
-                            </span>
-                            {insight.relatedTickets && insight.relatedTickets.length > 0 && (
-                              <span>
-                                <i className="fas fa-ticket-alt mr-1"></i>
-                                {insight.relatedTickets.length} tickets relacionados
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="mt-3">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <span className="text-sm text-gray-600">Nível de confiança:</span>
-                            </div>
-                            <Progress value={insight.confidence} className="h-2" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {insight.actionable && (
-                        <div className="ml-4">
-                          <Button size="sm" data-testid={`button-act-on-insight-${insight.id}`}>
-                            <i className="fas fa-play mr-2"></i>
-                            Agir
-                          </Button>
-                        </div>
+        <TabsContent value="predictions" className="space-y-4">
+          <div className="grid gap-4">
+            {insights.predictions.map((prediction) => (
+              <Card key={prediction.id} className={`border-l-4 ${
+                prediction.impact === 'critical' ? 'border-l-red-500' :
+                prediction.impact === 'high' ? 'border-l-orange-500' :
+                prediction.impact === 'positive' ? 'border-l-green-500' :
+                'border-l-blue-500'
+              }`}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {prediction.impact === 'critical' ? (
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                      ) : prediction.impact === 'positive' ? (
+                        <CheckCircle className="w-6 h-6 text-green-500" />
+                      ) : (
+                        <TrendingUp className="w-6 h-6 text-blue-500" />
                       )}
+                      <div>
+                        <CardTitle className="text-lg" data-testid={`prediction-title-${prediction.id}`}>
+                          {prediction.title}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {prediction.description}
+                        </p>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                    <div className="text-right">
+                      <Badge variant={
+                        prediction.impact === 'critical' ? 'destructive' :
+                        prediction.impact === 'positive' ? 'default' : 'secondary'
+                      }>
+                        {Math.round(prediction.confidence * 100)}% confiança
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center">
+                      <Lightbulb className="w-4 h-4 mr-2" />
+                      Sugestões:
+                    </h4>
+                    <ul className="space-y-1">
+                      {prediction.suggestions.map((suggestion, index) => (
+                        <li key={index} className="flex items-center text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex space-x-2 mt-4">
+                      <Button size="sm" data-testid={`button-apply-${prediction.id}`}>
+                        Aplicar Sugestões
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Ver Detalhes
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
 
-        {/* Predictions Tab */}
-        <TabsContent value="predictions" className="space-y-6">
-          {predictiveData && (
-            <>
-              {/* Volume Prediction */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <i className="fas fa-chart-line mr-2"></i>
-                    Previsão de Volume de Tickets
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600 mb-2">Volume Atual</p>
-                      <p className="text-3xl font-bold text-gray-900">
-                        {predictiveData.ticketVolumeNext7Days.current}
-                      </p>
-                      <p className="text-sm text-gray-500">tickets</p>
-                    </div>
-                    
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600 mb-2">Previsão (7 dias)</p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {predictiveData.ticketVolumeNext7Days.predicted}
-                      </p>
-                      <div className="flex items-center justify-center mt-1">
-                        <i className={`fas ${getTrendIcon(predictiveData.ticketVolumeNext7Days.trend)} mr-1`}></i>
-                        <span className="text-sm text-gray-600">
-                          {predictiveData.ticketVolumeNext7Days.trend}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600 mb-2">Confiança</p>
-                      <p className="text-3xl font-bold text-green-600">
-                        {predictiveData.ticketVolumeNext7Days.confidence}%
-                      </p>
-                      <Progress 
-                        value={predictiveData.ticketVolumeNext7Days.confidence} 
-                        className="h-2 mt-2" 
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* SLA Risk Tickets */}
-              {predictiveData.slaRiskTickets.count > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-orange-700">
-                      <i className="fas fa-exclamation-triangle mr-2"></i>
-                      Tickets em Risco de SLA ({predictiveData.slaRiskTickets.count})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {predictiveData.slaRiskTickets.tickets.map((ticket: any) => (
-                        <div key={ticket.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-gray-900">#{ticket.number}</p>
-                            <p className="text-sm text-gray-600">{ticket.subject}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-orange-700">
-                              Risco: {ticket.riskLevel}%
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {Math.floor(ticket.timeToDeadline / 60)}h restantes
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Category Trends */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <i className="fas fa-chart-bar mr-2"></i>
-                    Tendências por Categoria
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {predictiveData.categoryTrends.map((trend: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium text-gray-900">{trend.category}</p>
-                          <p className="text-sm text-gray-600">{trend.ticketsCount} tickets</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`text-sm font-medium ${trend.change > 0 ? 'text-red-600' : trend.change < 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                            {trend.change > 0 ? '+' : ''}{trend.change}%
-                          </span>
-                          <i className={`fas ${getTrendIcon(trend.trend)}`}></i>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        {/* Sentiment Analysis Tab */}
-        <TabsContent value="sentiment" className="space-y-6">
-          {sentimentData && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <i className="fas fa-smile mr-2"></i>
-                    Análise de Sentimento Geral
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-4xl mb-4">
-                      {sentimentData.overall.score >= 0.7 ? '😊' : sentimentData.overall.score >= 0.4 ? '😐' : '😞'}
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 mb-2">
-                      {(sentimentData.overall.score * 100).toFixed(1)}%
-                    </p>
-                    <p className="text-gray-600">Satisfação geral dos clientes</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Distribuição de Sentimentos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                      Positivo
-                    </span>
-                    <span className="font-medium">{sentimentData.positive}%</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                      Neutro
-                    </span>
-                    <span className="font-medium">{sentimentData.neutral}%</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                      Negativo
-                    </span>
-                    <span className="font-medium">{sentimentData.negative}%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Automation Tab */}
-        <TabsContent value="automation" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
+        <TabsContent value="sentiment" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <i className="fas fa-robot mr-2"></i>
-                  Automações Ativas
-                </CardTitle>
+                <CardTitle>Distribuição de Sentimento</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div>
-                      <p className="font-medium text-green-900">Categorização Automática</p>
-                      <p className="text-sm text-green-700">Classifica tickets por conteúdo</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ThumbsUp className="w-4 h-4 text-green-500" />
+                      <span>Positivo</span>
                     </div>
-                    <Badge className="bg-green-100 text-green-800">Ativo</Badge>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{insights.sentiment.overview.positive}%</span>
+                      <Progress value={insights.sentiment.overview.positive} className="w-20" />
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div>
-                      <p className="font-medium text-blue-900">Priorização Inteligente</p>
-                      <p className="text-sm text-blue-700">Define prioridade por urgência</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MessageSquare className="w-4 h-4 text-gray-500" />
+                      <span>Neutro</span>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800">Ativo</Badge>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{insights.sentiment.overview.neutral}%</span>
+                      <Progress value={insights.sentiment.overview.neutral} className="w-20" />
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div>
-                      <p className="font-medium text-yellow-900">Roteamento Automático</p>
-                      <p className="text-sm text-yellow-700">Atribui tickets para equipes</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ThumbsDown className="w-4 h-4 text-red-500" />
+                      <span>Negativo</span>
                     </div>
-                    <Badge className="bg-yellow-100 text-yellow-800">Configurando</Badge>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{insights.sentiment.overview.negative}%</span>
+                      <Progress value={insights.sentiment.overview.negative} className="w-20" />
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -518,39 +388,185 @@ export function AIInsights() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <i className="fas fa-chart-line mr-2"></i>
-                  Performance da Automação
-                </CardTitle>
+                <CardTitle>Evolução do Sentimento</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Taxa de Acerto</span>
-                      <span className="font-medium">87%</span>
-                    </div>
-                    <Progress value={87} className="h-2" />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Tickets Processados</span>
-                      <span className="font-medium">1,234</span>
-                    </div>
-                    <Progress value={75} className="h-2" />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Tempo Economizado</span>
-                      <span className="font-medium">48h</span>
-                    </div>
-                    <Progress value={90} className="h-2" />
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={insights.sentiment.data}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="period" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line 
+                      type="monotone" 
+                      dataKey="positive" 
+                      stroke="#10b981" 
+                      name="Positivo"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="negative" 
+                      stroke="#ef4444" 
+                      name="Negativo"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Categorias Mais Frequentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {insights.categories.map((category, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-medium" data-testid={`category-name-${index}`}>
+                          {category.name}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {category.count} tickets • {Math.round(category.confidence * 100)}% confiança
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={category.trend > 0 ? 'default' : category.trend < 0 ? 'destructive' : 'secondary'}>
+                        {category.trend > 0 ? '+' : ''}{category.trend}%
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="agents" className="space-y-4">
+          <div className="grid gap-6">
+            {insights.agentInsights.map((agent) => (
+              <Card key={agent.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <CardTitle data-testid={`agent-name-${agent.id}`}>{agent.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Performance geral: {agent.performance.satisfactionScore}/5.0
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={
+                      agent.performance.trend === 'up' ? 'default' :
+                      agent.performance.trend === 'down' ? 'destructive' : 'secondary'
+                    }>
+                      {agent.performance.trend === 'up' ? '↗' : 
+                       agent.performance.trend === 'down' ? '↘' : '→'} Tendência
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {agent.performance.resolutionRate}%
+                      </p>
+                      <p className="text-sm text-muted-foreground">Taxa de Resolução</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {agent.performance.avgResponseTime}min
+                      </p>
+                      <p className="text-sm text-muted-foreground">Tempo Médio</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-purple-600">
+                        {agent.performance.satisfactionScore}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Satisfação</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-green-700 mb-2">Pontos Fortes:</h4>
+                      <ul className="space-y-1">
+                        {agent.strengths.map((strength, index) => (
+                          <li key={index} className="flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                            {strength}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-orange-700 mb-2">Oportunidades:</h4>
+                      <ul className="space-y-1">
+                        {agent.improvements.map((improvement, index) => (
+                          <li key={index} className="flex items-center text-sm">
+                            <Target className="w-4 h-4 text-orange-500 mr-2" />
+                            {improvement}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="automation" className="space-y-4">
+          <div className="grid gap-4">
+            {insights.automationOpportunities.map((opportunity) => (
+              <Card key={opportunity.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg" data-testid={`automation-title-${opportunity.id}`}>
+                        {opportunity.title}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {opportunity.description}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Badge variant={opportunity.potential === 'high' ? 'default' : 'secondary'}>
+                        {opportunity.potential === 'high' ? 'Alto Potencial' : 'Médio Potencial'}
+                      </Badge>
+                      <Badge variant="outline">
+                        {opportunity.effort === 'low' ? 'Baixo Esforço' : 
+                         opportunity.effort === 'medium' ? 'Médio Esforço' : 'Alto Esforço'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Zap className="w-5 h-5 text-yellow-500" />
+                      <span className="font-medium">Impacto:</span>
+                      <span className="text-green-600">{opportunity.impact}</span>
+                    </div>
+                    <Button size="sm" data-testid={`button-implement-${opportunity.id}`}>
+                      Implementar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
       </Tabs>

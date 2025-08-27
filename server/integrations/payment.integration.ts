@@ -61,12 +61,26 @@ class PaymentService {
     }
   }
 
-  async createSubscription(customerId: string, priceId: string, metadata?: Record<string, string>): Promise<SubscriptionResult> {
+  async createSubscription(email: string, priceId: string, paymentMethodId?: string, metadata?: Record<string, string>): Promise<SubscriptionResult> {
     if (!this.initialized || !this.stripe) {
       return { success: false, error: 'Payment service not available' };
     }
 
     try {
+      // First create or find customer
+      let customerId: string;
+      try {
+        const existingCustomers = await this.stripe.customers.list({ email, limit: 1 });
+        if (existingCustomers.data.length > 0) {
+          customerId = existingCustomers.data[0].id;
+        } else {
+          const customer = await this.stripe.customers.create({ email });
+          customerId = customer.id;
+        }
+      } catch (error) {
+        return { success: false, error: 'Failed to create customer' };
+      }
+
       const subscription = await this.stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],

@@ -1,282 +1,447 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { apiRequest } from '@/lib/queryClient';
-import { authService } from '@/lib/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Bot,
+  Send,
+  ThumbsUp,
+  ThumbsDown,
+  User,
+  MessageCircle,
+  Loader2,
+  Minimize2,
+  Maximize2,
+  X,
+  Paperclip,
+  Lightbulb,
+  ExternalLink
+} from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
-interface ChatMessage {
+interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  type: 'user' | 'bot';
   content: string;
   timestamp: Date;
-  suggestions?: Array<{
+  suggestions?: string[];
+  articles?: Array<{
+    id: string;
     title: string;
-    category: string;
-    priority: string;
-    estimatedTime: number;
-    tags: string[];
+    snippet: string;
+    url: string;
   }>;
+  rating?: 'positive' | 'negative';
+  confidence?: number;
 }
 
-interface AIChatbotProps {
-  onCreateTicket?: (subject: string, description: string) => void;
-  className?: string;
+interface ChatState {
+  messages: Message[];
+  isTyping: boolean;
+  sessionId: string;
 }
 
-export function AIChatbot({ onCreateTicket, className = '' }: AIChatbotProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Olá! Sou o assistente virtual do TatuTicket. Como posso ajudá-lo hoje?',
-      timestamp: new Date()
-    }
-  ]);
-  
-  const [currentMessage, setCurrentMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const user = authService.getCurrentUser();
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const sendMessage = async () => {
-    if (!currentMessage.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: currentMessage,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setCurrentMessage('');
-    setIsLoading(true);
-
-    try {
-      // Get AI suggestions for tickets
-      const response = await apiRequest('POST', '/api/ai/suggest-tickets', {
-        message: currentMessage
-      });
-      const suggestions = await response.json();
-
-      let responseText = 'Baseado na sua mensagem, identifiquei alguns possíveis problemas. Vou sugerir algumas opções:';
-
-      if (suggestions && suggestions.length > 0) {
-        responseText += '\n\nSugestões de tickets:';
-        suggestions.forEach((suggestion: any, index: number) => {
-          responseText += `\n${index + 1}. ${suggestion.title} (${suggestion.category}) - Tempo estimado: ${suggestion.estimatedTime}h`;
-        });
-        responseText += '\n\nGostaria que eu crie um ticket para algum destes problemas?';
-      } else {
-        responseText = 'Entendi sua solicitação. Para melhor atendê-lo, vou criar algumas opções de ticket baseadas na sua mensagem.';
+// Mock AI responses for demo
+const MOCK_RESPONSES = {
+  greeting: {
+    content: "Olá! Sou o assistente virtual do TatuTicket. Como posso ajudá-lo hoje?",
+    suggestions: [
+      "Como criar um novo ticket?",
+      "Verificar status do meu ticket",
+      "Problemas de login",
+      "Alterar minha senha"
+    ]
+  },
+  ticket_create: {
+    content: "Para criar um novo ticket, você pode clicar no botão 'Novo Ticket' no painel principal ou seguir estes passos:\n\n1. Vá até a seção 'Meus Tickets'\n2. Clique em 'Criar Ticket'\n3. Preencha o assunto e descrição\n4. Selecione a prioridade\n5. Clique em 'Enviar'\n\nPosso ajudá-lo a criar um ticket agora mesmo se desejar!",
+    articles: [
+      {
+        id: '1',
+        title: 'Como criar um ticket de suporte',
+        snippet: 'Guia passo a passo para criar tickets...',
+        url: '/knowledge/criar-ticket'
       }
+    ]
+  },
+  ticket_status: {
+    content: "Para verificar o status dos seus tickets, você pode:\n\n1. Acessar a seção 'Meus Tickets' no painel\n2. Usar a busca para encontrar um ticket específico\n3. Filtrar por status (aberto, em andamento, resolvido)\n\nVocê também receberá notificações automáticas quando houver atualizações. Gostaria que eu verifique algum ticket específico?",
+    suggestions: ["Buscar ticket por número", "Ver tickets em aberto", "Histórico de tickets"]
+  },
+  login_help: {
+    content: "Se você está tendo problemas para fazer login, aqui estão algumas soluções:\n\n1. **Senha esquecida**: Use o link 'Esqueci minha senha' na tela de login\n2. **Email incorreto**: Verifique se está usando o email correto\n3. **Conta bloqueada**: Entre em contato conosco se sua conta foi bloqueada\n4. **Problemas técnicos**: Tente limpar o cache do navegador\n\nPrecisa de ajuda específica com algum desses pontos?",
+    articles: [
+      {
+        id: '2',
+        title: 'Problemas de login - Soluções',
+        snippet: 'Resolvendo problemas comuns de acesso...',
+        url: '/knowledge/login-problemas'
+      }
+    ]
+  }
+};
 
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: responseText,
+export function AIChatbot({ 
+  isMinimized = false, 
+  onToggleMinimize,
+  onClose 
+}: { 
+  isMinimized?: boolean;
+  onToggleMinimize?: () => void;
+  onClose?: () => void;
+}) {
+  const [chatState, setChatState] = useState<ChatState>({
+    messages: [],
+    isTyping: false,
+    sessionId: `session_${Date.now()}`
+  });
+  const [inputMessage, setInputMessage] = useState('');
+  const [isOpen, setIsOpen] = useState(!isMinimized);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  // Initialize with greeting
+  useEffect(() => {
+    if (chatState.messages.length === 0) {
+      const greetingMessage: Message = {
+        id: '1',
+        type: 'bot',
+        content: MOCK_RESPONSES.greeting.content,
         timestamp: new Date(),
-        suggestions: suggestions || []
+        suggestions: MOCK_RESPONSES.greeting.suggestions
+      };
+      setChatState(prev => ({
+        ...prev,
+        messages: [greetingMessage]
+      }));
+    }
+  }, []);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatState.messages]);
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      // Simulate AI processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return generateAIResponse(message);
+    },
+    onSuccess: (response) => {
+      const botMessage: Message = {
+        id: `bot_${Date.now()}`,
+        type: 'bot',
+        content: response.content,
+        timestamp: new Date(),
+        suggestions: response.suggestions,
+        articles: response.articles,
+        confidence: response.confidence || 0.85
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-
-    } catch (error) {
-      console.error('Error getting AI response:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Desculpe, houve um problema temporário. Posso ajudá-lo de outra forma? Você pode descrever seu problema e eu tentarei encontrar uma solução na nossa base de conhecimento.',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      setChatState(prev => ({
+        ...prev,
+        messages: [...prev.messages, botMessage],
+        isTyping: false
+      }));
+    },
+    onError: () => {
+      toast({
+        title: 'Erro na comunicação',
+        description: 'Não foi possível processar sua mensagem',
+        variant: 'destructive'
+      });
+      setChatState(prev => ({ ...prev, isTyping: false }));
     }
-  };
+  });
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const handleCreateTicket = (suggestion: any) => {
-    const subject = suggestion.title;
-    const description = `Descrição: ${currentMessage}\n\nCategoria sugerida: ${suggestion.category}\nPrioridade: ${suggestion.priority}\nTags: ${suggestion.tags.join(', ')}`;
+  const generateAIResponse = (message: string) => {
+    const lowerMessage = message.toLowerCase();
     
-    if (onCreateTicket) {
-      onCreateTicket(subject, description);
+    if (lowerMessage.includes('criar') && lowerMessage.includes('ticket')) {
+      return MOCK_RESPONSES.ticket_create;
+    } else if (lowerMessage.includes('status') && lowerMessage.includes('ticket')) {
+      return MOCK_RESPONSES.ticket_status;
+    } else if (lowerMessage.includes('login') || lowerMessage.includes('senha')) {
+      return MOCK_RESPONSES.login_help;
+    } else {
+      return {
+        content: "Entendi sua pergunta. Deixe-me pesquisar as melhores informações para ajudá-lo. Enquanto isso, você pode explorar nossa base de conhecimento ou criar um ticket para suporte personalizado.",
+        suggestions: ["Falar com atendente humano", "Buscar na base de conhecimento", "Criar ticket"],
+        confidence: 0.75
+      };
     }
+  };
 
-    const confirmMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: `Perfeito! Criei um ticket para "${subject}". Você receberá atualizações por email e pode acompanhar o status no painel.`,
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+
+    const userMessage: Message = {
+      id: `user_${Date.now()}`,
+      type: 'user',
+      content: inputMessage,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, confirmMessage]);
+    setChatState(prev => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+      isTyping: true
+    }));
+
+    sendMessageMutation.mutate(inputMessage);
+    setInputMessage('');
   };
 
-  const commonQuestions = [
-    'Como resetar minha senha?',
-    'Problemas no sistema de pagamento',
-    'Erro ao gerar relatórios',
-    'Solicitar nova funcionalidade',
-    'Problemas de performance'
-  ];
+  const handleSuggestionClick = (suggestion: string) => {
+    setInputMessage(suggestion);
+    handleSendMessage();
+  };
+
+  const handleRating = (messageId: string, rating: 'positive' | 'negative') => {
+    setChatState(prev => ({
+      ...prev,
+      messages: prev.messages.map(msg => 
+        msg.id === messageId ? { ...msg, rating } : msg
+      )
+    }));
+
+    toast({
+      title: rating === 'positive' ? 'Obrigado pelo feedback!' : 'Feedback recebido',
+      description: rating === 'positive' 
+        ? 'Fico feliz que pude ajudar!' 
+        : 'Vamos melhorar nossa assistência'
+    });
+  };
 
   if (isMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          onClick={() => setIsMinimized(false)}
-          className="rounded-full w-16 h-16 shadow-lg"
-          data-testid="button-open-chatbot"
-        >
-          <i className="fas fa-comments text-xl"></i>
-        </Button>
-      </div>
+      <Button
+        onClick={onToggleMinimize}
+        className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg"
+        data-testid="button-open-chat"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </Button>
     );
   }
 
   return (
-    <Card className={`fixed bottom-4 right-4 w-96 h-96 z-50 flex flex-col ${className}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center">
-            <i className="fas fa-robot mr-2 text-primary"></i>
-            Assistente IA
-          </CardTitle>
-          <div className="flex space-x-2">
-            <Button
-              variant="ghost"
+    <Card className="fixed bottom-4 right-4 w-96 h-[500px] shadow-xl z-50 flex flex-col" data-testid="ai-chatbot">
+      {/* Header */}
+      <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
+        <div className="flex items-center space-x-3">
+          <Avatar className="w-8 h-8">
+            <AvatarImage src="/bot-avatar.png" />
+            <AvatarFallback>
+              <Bot className="w-4 h-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <CardTitle className="text-sm">Assistente IA</CardTitle>
+            <p className="text-xs text-muted-foreground">Online</p>
+          </div>
+        </div>
+        <div className="flex space-x-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onToggleMinimize}
+            data-testid="button-minimize-chat"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onClose}
+            data-testid="button-close-chat"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardHeader>
+
+      {/* Messages */}
+      <CardContent className="flex-1 p-0">
+        <ScrollArea className="h-full p-4">
+          <div className="space-y-4">
+            {chatState.messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`flex space-x-2 max-w-[80%] ${
+                  message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                }`}>
+                  <Avatar className="w-6 h-6">
+                    {message.type === 'user' ? (
+                      <AvatarFallback><User className="w-3 h-3" /></AvatarFallback>
+                    ) : (
+                      <AvatarFallback><Bot className="w-3 h-3" /></AvatarFallback>
+                    )}
+                  </Avatar>
+                  
+                  <div className="space-y-2">
+                    <div className={`rounded-lg p-3 ${
+                      message.type === 'user' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'bg-muted'
+                    }`}>
+                      <p className="text-sm whitespace-pre-wrap" data-testid={`message-${message.id}`}>
+                        {message.content}
+                      </p>
+                      
+                      {message.confidence && message.type === 'bot' && (
+                        <div className="mt-2 pt-2 border-t border-border/50">
+                          <Badge variant="outline" className="text-xs">
+                            {Math.round(message.confidence * 100)}% confiança
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Suggestions */}
+                    {message.suggestions && (
+                      <div className="space-y-1">
+                        {message.suggestions.map((suggestion, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-auto py-1 px-2 w-full justify-start"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            data-testid={`suggestion-${index}`}
+                          >
+                            <Lightbulb className="w-3 h-3 mr-1" />
+                            {suggestion}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Knowledge Articles */}
+                    {message.articles && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Artigos relacionados:
+                        </p>
+                        {message.articles.map((article) => (
+                          <div key={article.id} className="border rounded p-2 text-xs">
+                            <h4 className="font-medium">{article.title}</h4>
+                            <p className="text-muted-foreground">{article.snippet}</p>
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Ler artigo
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Rating */}
+                    {message.type === 'bot' && !message.rating && (
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleRating(message.id, 'positive')}
+                          data-testid={`thumbs-up-${message.id}`}
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleRating(message.id, 'negative')}
+                          data-testid={`thumbs-down-${message.id}`}
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {message.rating && (
+                      <Badge variant={message.rating === 'positive' ? 'default' : 'secondary'} className="text-xs">
+                        {message.rating === 'positive' ? 'Útil' : 'Feedback recebido'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {chatState.isTyping && (
+              <div className="flex justify-start">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback><Bot className="w-3 h-3" /></AvatarFallback>
+                  </Avatar>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      </CardContent>
+
+      {/* Input */}
+      <div className="border-t p-4">
+        <div className="flex space-x-2">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Paperclip className="w-4 h-4" />
+          </Button>
+          <div className="flex-1 flex space-x-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Digite sua mensagem..."
+              className="flex-1"
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={chatState.isTyping}
+              data-testid="input-chat-message"
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || chatState.isTyping}
               size="sm"
-              onClick={() => setIsMinimized(true)}
-              data-testid="button-minimize-chatbot"
+              data-testid="button-send-message"
             >
-              <i className="fas fa-minus"></i>
+              {chatState.isTyping ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-green-600">Online</span>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col p-4">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-          {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xs p-3 rounded-lg ${
-                message.role === 'user' 
-                  ? 'bg-primary text-white' 
-                  : 'bg-gray-100 text-gray-900'
-              }`}>
-                <p className="text-sm whitespace-pre-line">{message.content}</p>
-                <p className="text-xs mt-1 opacity-70">
-                  {message.timestamp.toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </p>
-                
-                {/* Suggestions */}
-                {message.suggestions && message.suggestions.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {message.suggestions.map((suggestion, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCreateTicket(suggestion)}
-                        className="w-full text-left justify-start text-xs"
-                        data-testid={`button-create-ticket-${index}`}
-                      >
-                        <i className="fas fa-plus mr-2"></i>
-                        Criar: {suggestion.title}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 p-3 rounded-lg">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Quick Questions */}
-        {messages.length === 1 && (
-          <div className="mb-4">
-            <p className="text-xs text-gray-600 mb-2">Perguntas comuns:</p>
-            <div className="space-y-1">
-              {commonQuestions.slice(0, 3).map((question, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentMessage(question)}
-                  className="w-full text-left justify-start text-xs h-auto p-2"
-                  data-testid={`button-quick-question-${index}`}
-                >
-                  {question}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Input */}
-        <div className="flex space-x-2">
-          <Input
-            value={currentMessage}
-            onChange={(e) => setCurrentMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Digite sua mensagem..."
-            disabled={isLoading}
-            className="flex-1"
-            data-testid="input-chat-message"
-          />
-          <Button 
-            onClick={sendMessage}
-            disabled={!currentMessage.trim() || isLoading}
-            size="sm"
-            data-testid="button-send-message"
-          >
-            <i className="fas fa-paper-plane"></i>
+        
+        {/* Quick Actions */}
+        <div className="mt-2 flex flex-wrap gap-1">
+          <Button variant="outline" size="sm" className="text-xs h-6">
+            Novo Ticket
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs h-6">
+            Meus Tickets
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs h-6">
+            Base de Conhecimento
           </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

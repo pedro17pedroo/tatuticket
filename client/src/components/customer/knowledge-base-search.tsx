@@ -1,322 +1,413 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, BookOpen, Eye, X } from "lucide-react";
-import { authService } from "@/lib/auth";
-import type { KnowledgeArticle } from "@shared/schema";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Search,
+  BookOpen,
+  Star,
+  ThumbsUp,
+  ThumbsDown,
+  ExternalLink,
+  Filter,
+  Clock,
+  User,
+  Tag,
+  TrendingUp,
+  Eye
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
-interface KnowledgeBaseSearchProps {
-  onClose?: () => void;
-}
+// Mock knowledge base data
+const MOCK_ARTICLES = [
+  {
+    id: '1',
+    title: 'Como criar um novo ticket de suporte',
+    content: 'Para criar um novo ticket, acesse o painel principal e clique em "Novo Ticket". Preencha as informações necessárias...',
+    category: 'Tickets',
+    tags: ['tutorial', 'básico', 'tickets'],
+    views: 1245,
+    rating: 4.8,
+    votes: 156,
+    author: 'Equipe TatuTicket',
+    lastUpdated: new Date('2024-01-15'),
+    helpful: true
+  },
+  {
+    id: '2',
+    title: 'Problemas de login e recuperação de senha',
+    content: 'Se você está enfrentando problemas para acessar sua conta, siga estes passos para resolver...',
+    category: 'Conta',
+    tags: ['login', 'senha', 'acesso'],
+    views: 890,
+    rating: 4.6,
+    votes: 98,
+    author: 'Suporte TatuTicket',
+    lastUpdated: new Date('2024-01-10'),
+    helpful: false
+  },
+  {
+    id: '3',
+    title: 'Configurando notificações por email',
+    content: 'Aprenda como personalizar suas notificações por email para receber apenas as informações relevantes...',
+    category: 'Configurações',
+    tags: ['notificações', 'email', 'configuração'],
+    views: 567,
+    rating: 4.9,
+    votes: 45,
+    author: 'Ana Silva',
+    lastUpdated: new Date('2024-01-08'),
+    helpful: true
+  },
+  {
+    id: '4',
+    title: 'Entendendo os níveis de prioridade',
+    content: 'Os tickets são categorizados em diferentes níveis de prioridade. Aqui você aprende quando usar cada um...',
+    category: 'Tickets',
+    tags: ['prioridade', 'categorização', 'urgência'],
+    views: 423,
+    rating: 4.7,
+    votes: 67,
+    author: 'Carlos Santos',
+    lastUpdated: new Date('2024-01-05'),
+    helpful: false
+  },
+  {
+    id: '5',
+    title: 'Integração com Slack - Guia completo',
+    content: 'Configure a integração com Slack para receber notificações de tickets diretamente no seu workspace...',
+    category: 'Integrações',
+    tags: ['slack', 'integração', 'notificações'],
+    views: 789,
+    rating: 4.5,
+    votes: 89,
+    author: 'Equipe TatuTicket',
+    lastUpdated: new Date('2024-01-12'),
+    helpful: true
+  }
+];
 
-export function KnowledgeBaseSearch({ onClose }: KnowledgeBaseSearchProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
-  const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
-  const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
-  const tenantId = authService.getTenantId();
+const CATEGORIES = [
+  { name: 'Todos', count: 25 },
+  { name: 'Tickets', count: 8 },
+  { name: 'Conta', count: 5 },
+  { name: 'Configurações', count: 7 },
+  { name: 'Integrações', count: 3 },
+  { name: 'API', count: 2 }
+];
 
-  const { data: searchResults, isLoading, refetch } = useQuery<KnowledgeArticle[]>({
-    queryKey: ['/api/knowledge-articles/search', tenantId, searchQuery],
-    queryFn: async () => {
-      if (!searchQuery.trim()) return [];
-      const response = await fetch(`/api/knowledge-articles/search?tenantId=${tenantId}&query=${encodeURIComponent(searchQuery)}`);
-      if (!response.ok) throw new Error('Falha na busca');
-      return response.json();
-    },
-    enabled: false // Only search when user submits
+export function KnowledgeBaseSearch() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [sortBy, setSortBy] = useState('relevance');
+  const { toast } = useToast();
+
+  const { data: articles = MOCK_ARTICLES, isLoading } = useQuery({
+    queryKey: ['/api/knowledge-articles', searchQuery, selectedCategory, sortBy],
+    enabled: true,
   });
 
-  // Increment article view count
-  const incrementViewMutation = useMutation({
-    mutationFn: async (articleId: string) => {
-      const response = await fetch(`/api/knowledge-articles/${articleId}/view`, {
-        method: 'PUT',
-      });
-      if (!response.ok) throw new Error('Failed to increment view');
-      return response.json();
-    },
-    onSuccess: () => {
-      // Refetch search results to update view count
-      refetch();
-    }
-  });
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setHasSearched(true);
-      refetch();
-    }
+  const handleVote = (articleId: string, type: 'up' | 'down') => {
+    toast({ 
+      title: 'Obrigado pelo feedback!',
+      description: type === 'up' ? 'Marcado como útil' : 'Feedback registrado'
+    });
   };
 
-  const handleViewArticle = (article: KnowledgeArticle) => {
-    setSelectedArticle(article);
-    setIsArticleModalOpen(true);
-    // Increment view count
-    incrementViewMutation.mutate(article.id);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      published: { label: "Publicado", variant: "default" },
-      draft: { label: "Rascunho", variant: "secondary" },
-      archived: { label: "Arquivado", variant: "outline" },
-    };
+  const filteredArticles = articles.filter(article => {
+    const matchesSearch = searchQuery === '' || 
+      article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const statusInfo = statusMap[status] || { label: status, variant: "default" };
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
-  };
+    const matchesCategory = selectedCategory === 'Todos' || article.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const sortedArticles = filteredArticles.sort((a, b) => {
+    switch (sortBy) {
+      case 'rating':
+        return b.rating - a.rating;
+      case 'views':
+        return b.views - a.views;
+      case 'recent':
+        return b.lastUpdated.getTime() - a.lastUpdated.getTime();
+      default:
+        return 0; // relevance (default order)
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6" data-testid="knowledge-base-search">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <BookOpen className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold text-gray-900">Base de Conhecimento</h2>
-        </div>
-        {onClose && (
-          <Button variant="ghost" onClick={onClose} data-testid="button-close-knowledge-base">
-            ✕
-          </Button>
-        )}
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight flex items-center justify-center">
+          <BookOpen className="w-10 h-10 mr-3 text-primary" />
+          Base de Conhecimento
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Encontre respostas rápidas para suas dúvidas
+        </p>
       </div>
 
-      {/* Search Form */}
+      {/* Search Bar */}
       <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="flex space-x-4">
-            <div className="flex-1">
+        <CardContent className="pt-6">
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                type="text"
-                placeholder="Digite sua dúvida ou palavras-chave..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="text-base"
-                data-testid="input-knowledge-search"
+                placeholder="Pesquisar artigos, tutoriais ou dúvidas..."
+                className="pl-10"
+                data-testid="input-search-knowledge"
               />
             </div>
-            <Button 
-              type="submit" 
-              disabled={!searchQuery.trim() || isLoading}
-              data-testid="button-search-knowledge"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              {isLoading ? 'Buscando...' : 'Buscar'}
+            <Button variant="outline" size="icon">
+              <Filter className="w-4 h-4" />
             </Button>
-          </form>
-          <p className="text-sm text-gray-500 mt-2">
-            Busque por problemas comuns, tutoriais e guias de uso do sistema
-          </p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Search Results */}
-      {hasSearched && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Resultados da Busca {searchQuery && `para "${searchQuery}"`}
-          </h3>
-          
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <Skeleton className="h-6 w-3/4 mb-3" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </CardContent>
-                </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Categories */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Categorias</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {CATEGORIES.map((category) => (
+                <Button
+                  key={category.name}
+                  variant={selectedCategory === category.name ? 'default' : 'ghost'}
+                  className="w-full justify-between"
+                  onClick={() => setSelectedCategory(category.name)}
+                  data-testid={`category-${category.name.toLowerCase()}`}
+                >
+                  <span>{category.name}</span>
+                  <Badge variant="secondary">{category.count}</Badge>
+                </Button>
               ))}
-            </div>
-          ) : searchResults && searchResults.length > 0 ? (
-            <div className="space-y-4">
-              {searchResults.map((article) => (
-                <Card key={article.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <h4 className="text-lg font-semibold text-gray-900 hover:text-primary cursor-pointer">
-                        {article.title}
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(article.status)}
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Eye className="h-4 w-4 mr-1" />
-                          {article.viewCount}
-                        </div>
+            </CardContent>
+          </Card>
+
+          {/* Sort Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Ordenar por</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[
+                { value: 'relevance', label: 'Relevância' },
+                { value: 'rating', label: 'Avaliação' },
+                { value: 'views', label: 'Visualizações' },
+                { value: 'recent', label: 'Mais recente' },
+              ].map((option) => (
+                <Button
+                  key={option.value}
+                  variant={sortBy === option.value ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setSortBy(option.value)}
+                  data-testid={`sort-${option.value}`}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Popular Tags */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Tags Populares</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-1">
+                {['tutorial', 'login', 'configuração', 'tickets', 'integração', 'api'].map((tag) => (
+                  <Badge 
+                    key={tag} 
+                    variant="outline" 
+                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                    onClick={() => setSearchQuery(tag)}
+                    data-testid={`tag-${tag}`}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-4">
+          {/* Results Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">
+              {searchQuery ? `Resultados para "${searchQuery}"` : 'Artigos Recentes'}
+            </h2>
+            <p className="text-muted-foreground">
+              {sortedArticles.length} artigos encontrados
+            </p>
+          </div>
+
+          {/* Articles List */}
+          <div className="space-y-4">
+            {sortedArticles.map((article) => (
+              <Card key={article.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {/* Article Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-2 hover:text-primary cursor-pointer" data-testid={`article-title-${article.id}`}>
+                          {article.title}
+                        </h3>
+                        <p className="text-muted-foreground line-clamp-2">
+                          {article.content}
+                        </p>
                       </div>
-                    </div>
-                    <p className="text-gray-600 mb-4 line-clamp-3">
-                      {article.content.length > 200 
-                        ? `${article.content.substring(0, 200)}...` 
-                        : article.content
-                      }
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">
-                        Atualizado em {new Date(article.updatedAt || article.createdAt!).toLocaleDateString('pt-BR')}
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewArticle(article)}
-                        data-testid={`button-view-article-${article.id}`}
-                      >
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Ler Artigo
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="w-4 h-4" />
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : hasSearched ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Nenhum artigo encontrado
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Não encontramos artigos relacionados à sua busca por "{searchQuery}".
-                </p>
-                <p className="text-sm text-gray-400">
-                  Tente usar palavras-chave diferentes ou criar um ticket para suporte personalizado.
-                </p>
-                <Button 
-                  className="mt-4" 
-                  onClick={() => setSearchQuery("")}
-                  data-testid="button-clear-search"
-                >
-                  Nova Busca
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      )}
 
-      {/* Popular Articles */}
-      {!hasSearched && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Artigos Mais Acessados
-          </h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Como criar um ticket de suporte</h4>
-                <p className="text-sm text-gray-600 mb-3">Guia passo a passo para criar sua primeira solicitação...</p>
-                <div className="flex items-center justify-between">
-                  <Badge variant="default">Tutorial</Badge>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Eye className="h-4 w-4 mr-1" />
-                    1.2k
+                    {/* Article Meta */}
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <User className="w-4 h-4" />
+                          <span>{article.author}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{article.lastUpdated.toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{article.views} visualizações</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span>{article.rating}</span>
+                        </div>
+                        <Badge variant="outline">{article.category}</Badge>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-1">
+                      {article.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">Este artigo foi útil?</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleVote(article.id, 'up')}
+                          className={article.helpful ? 'text-green-600' : ''}
+                          data-testid={`thumbs-up-${article.id}`}
+                        >
+                          <ThumbsUp className="w-4 h-4 mr-1" />
+                          Sim
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleVote(article.id, 'down')}
+                          className={!article.helpful ? 'text-red-600' : ''}
+                          data-testid={`thumbs-down-${article.id}`}
+                        >
+                          <ThumbsDown className="w-4 h-4 mr-1" />
+                          Não
+                        </Button>
+                      </div>
+                      <Button variant="outline" size="sm" data-testid={`view-article-${article.id}`}>
+                        Ler Artigo Completo
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Entendendo SLAs e prazos</h4>
-                <p className="text-sm text-gray-600 mb-3">Saiba como funcionam os tempos de resposta e resolução...</p>
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline">FAQ</Badge>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Eye className="h-4 w-4 mr-1" />
-                    890
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      )}
 
-      {/* Article View Modal */}
-      <Dialog open={isArticleModalOpen} onOpenChange={setIsArticleModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold text-gray-900">
-                {selectedArticle?.title}
-              </DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsArticleModalOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogHeader>
-          
-          {selectedArticle && (
-            <div className="space-y-6">
-              {/* Article Meta */}
-              <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(selectedArticle.status)}
-                  {selectedArticle.isPublic ? (
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      Público
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-orange-600 border-orange-600">
-                      Privado
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center text-sm text-gray-500">
-                  <Eye className="h-4 w-4 mr-1" />
-                  {selectedArticle.viewCount || 0} visualizações
-                </div>
-                <span className="text-sm text-gray-500">
-                  Atualizado em {new Date(selectedArticle.updatedAt || selectedArticle.createdAt!).toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-
-              {/* Article Content */}
-              <div className="prose prose-gray max-w-none">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {selectedArticle.content}
-                </div>
-              </div>
-
-              {/* Article Actions */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500">
-                    Este artigo foi útil?
-                  </span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      👍 Sim
+          {/* No Results */}
+          {sortedArticles.length === 0 && (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhum artigo encontrado</h3>
+                <p className="text-muted-foreground mb-4">
+                  Não encontramos artigos que correspondam à sua pesquisa.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Tente:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+                      Ver todos os artigos
                     </Button>
-                    <Button variant="outline" size="sm">
-                      👎 Não
+                    <Button variant="outline" size="sm" onClick={() => setSelectedCategory('Todos')}>
+                      Todas as categorias
                     </Button>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsArticleModalOpen(false)}
-                >
-                  Fechar
-                </Button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
-        </DialogContent>
-      </Dialog>
+
+          {/* Quick Help */}
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-3">
+                <TrendingUp className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200">
+                    Não encontrou o que procurava?
+                  </h3>
+                  <p className="text-sm text-blue-600 dark:text-blue-300 mb-3">
+                    Nossa equipe de suporte está sempre pronta para ajudar!
+                  </p>
+                  <div className="flex space-x-2">
+                    <Button size="sm" data-testid="button-create-ticket">
+                      Criar Ticket
+                    </Button>
+                    <Button variant="outline" size="sm" data-testid="button-contact-support">
+                      Falar com Suporte
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

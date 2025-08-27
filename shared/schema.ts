@@ -315,4 +315,212 @@ export type InsertApprovalWorkflow = z.infer<typeof insertApprovalWorkflowSchema
 export type InsertSlaConfig = z.infer<typeof insertSlaConfigSchema>;
 export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
 
+// Subscription and Payment Management
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripePriceId: text("stripe_price_id"),
+  status: text("status").notNull().default("pending"), // pending, active, past_due, canceled, unpaid
+  plan: text("plan").notNull(), // freemium, pro, enterprise
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  billingCycle: text("billing_cycle").default("monthly"), // monthly, yearly
+  amount: decimal("amount", { precision: 10, scale: 2 }),
+  currency: text("currency").default("brl"),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  subscriptionId: varchar("subscription_id"),
+  stripeInvoiceId: text("stripe_invoice_id").unique(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").default("brl"),
+  status: text("status").notNull(), // draft, open, paid, void, uncollectible
+  description: text("description"),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const paymentMethods = pgTable("payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  stripePaymentMethodId: text("stripe_payment_method_id").unique(),
+  type: text("type").notNull(), // card, boleto, pix
+  brand: text("brand"), // visa, mastercard, etc
+  last4: text("last4"),
+  expiryMonth: integer("expiry_month"),
+  expiryYear: integer("expiry_year"),
+  isDefault: boolean("is_default").default(false),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Workflow Automation System
+export const workflows = pgTable("workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  trigger: jsonb("trigger").notNull(), // { type: "ticket_created", conditions: [] }
+  actions: jsonb("actions").notNull(), // [{ type: "assign_agent", params: {} }]
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1), // execution order
+  metadata: jsonb("metadata"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const workflowExecutions = pgTable("workflow_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull(),
+  tenantId: varchar("tenant_id").notNull(),
+  resourceType: text("resource_type").notNull(), // ticket, user, etc
+  resourceId: varchar("resource_id").notNull(),
+  status: text("status").notNull().default("pending"), // pending, success, failed, skipped
+  input: jsonb("input"),
+  output: jsonb("output"),
+  error: text("error"),
+  executedAt: timestamp("executed_at").defaultNow(),
+});
+
+// Advanced Integrations
+export const integrations = pgTable("integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // slack, teams, jira, webhook
+  config: jsonb("config").notNull(), // credentials, endpoints, etc
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  metadata: jsonb("metadata"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhookEvents = pgTable("webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  integrationId: varchar("integration_id"),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: text("status").notNull().default("pending"), // pending, sent, failed, retrying
+  attempts: integer("attempts").default(0),
+  nextRetryAt: timestamp("next_retry_at"),
+  lastError: text("last_error"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Financial Analytics and Reports
+export const financialMetrics = pgTable("financial_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id"),
+  period: text("period").notNull(), // YYYY-MM
+  mrr: decimal("mrr", { precision: 12, scale: 2 }).default("0"), // Monthly Recurring Revenue
+  arr: decimal("arr", { precision: 12, scale: 2 }).default("0"), // Annual Recurring Revenue
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  churnRate: decimal("churn_rate", { precision: 5, scale: 2 }).default("0"),
+  ltv: decimal("ltv", { precision: 10, scale: 2 }).default("0"), // Lifetime Value
+  activeSubscriptions: integer("active_subscriptions").default(0),
+  newSubscriptions: integer("new_subscriptions").default(0),
+  canceledSubscriptions: integer("canceled_subscriptions").default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// AI Analytics and Insights
+export const aiInsights = pgTable("ai_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull(),
+  resourceType: text("resource_type").notNull(), // ticket, customer, agent
+  resourceId: varchar("resource_id"),
+  insightType: text("insight_type").notNull(), // sentiment, category, prediction, suggestion
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  data: jsonb("data").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Additional Relations
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [subscriptions.tenantId], references: [tenants.id] }),
+  invoices: many(invoices),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  tenant: one(tenants, { fields: [invoices.tenantId], references: [tenants.id] }),
+  subscription: one(subscriptions, { fields: [invoices.subscriptionId], references: [subscriptions.id] }),
+}));
+
+export const workflowsRelations = relations(workflows, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [workflows.tenantId], references: [tenants.id] }),
+  executions: many(workflowExecutions),
+  creator: one(users, { fields: [workflows.createdBy], references: [users.id] }),
+}));
+
+export const integrationsRelations = relations(integrations, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [integrations.tenantId], references: [tenants.id] }),
+  webhookEvents: many(webhookEvents),
+  creator: one(users, { fields: [integrations.createdBy], references: [users.id] }),
+}));
+
+// Insert schemas for new tables
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIntegrationSchema = createInsertSchema(integrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for new entities
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type Workflow = typeof workflows.$inferSelect;
+export type WorkflowExecution = typeof workflowExecutions.$inferSelect;
+export type Integration = typeof integrations.$inferSelect;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type FinancialMetric = typeof financialMetrics.$inferSelect;
+export type AIInsight = typeof aiInsights.$inferSelect;
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+
 
