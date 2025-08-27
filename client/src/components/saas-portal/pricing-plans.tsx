@@ -151,7 +151,7 @@ export function PricingPlans() {
       window.location.href = '/contato?plan=enterprise';
     } else {
       // Redirect to signup with plan
-      window.location.href = `/cadastro?plan=${planId}&billing=${isYearly ? 'yearly' : 'monthly'}`;
+      window.location.href = `/register?plan=${planId}&billing=${isYearly ? 'yearly' : 'monthly'}`;
     }
   };
 

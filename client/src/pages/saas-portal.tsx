@@ -125,6 +125,7 @@ export function SaasPortal() {
                   size="lg"
                   variant="outline"
                   className="border-2 border-white text-white hover:bg-white hover:text-primary"
+                  onClick={() => window.location.href = '/register?demo=true'}
                   data-testid="button-schedule-demo"
                 >
                   Agendar Demo
@@ -197,6 +198,7 @@ export function SaasPortal() {
               size="lg"
               variant="outline"
               className="border-2 border-white text-white hover:bg-white hover:text-primary"
+              onClick={() => window.location.href = '/register?demo=true'}
               data-testid="button-live-demo"
             >
               Ver Demo Ao Vivo
