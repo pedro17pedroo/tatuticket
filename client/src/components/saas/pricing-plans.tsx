@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { SalesContactForm } from "@/components/saas/sales-contact-form";
+import { DemoForm } from "@/components/saas/demo-form";
 
 interface PlanFeature {
   name: string;
@@ -25,6 +27,8 @@ interface PricingPlan {
 
 export function PricingPlans() {
   const [isYearly, setIsYearly] = useState(false);
+  const [isSalesFormOpen, setIsSalesFormOpen] = useState(false);
+  const [isDemoFormOpen, setIsDemoFormOpen] = useState(false);
 
   const plans: PricingPlan[] = [
     {
@@ -176,6 +180,15 @@ export function PricingPlans() {
                 <Button 
                   className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
+                  onClick={() => {
+                    if (plan.cta === "Falar com Vendas") {
+                      setIsSalesFormOpen(true);
+                    } else if (plan.cta.includes("Teste")) {
+                      window.location.href = '/register';
+                    } else {
+                      window.location.href = '/register';
+                    }
+                  }}
                   data-testid={`button-select-${plan.name.toLowerCase()}`}
                 >
                   {plan.cta}
@@ -223,11 +236,18 @@ export function PricingPlans() {
               para organizações com requisitos específicos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="outline" data-testid="button-schedule-demo">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDemoFormOpen(true)}
+                data-testid="button-schedule-demo"
+              >
                 <i className="fas fa-calendar mr-2"></i>
                 Agendar Demo
               </Button>
-              <Button data-testid="button-contact-sales">
+              <Button 
+                onClick={() => setIsSalesFormOpen(true)}
+                data-testid="button-contact-sales"
+              >
                 <i className="fas fa-phone mr-2"></i>
                 Falar com Vendas
               </Button>
@@ -271,6 +291,18 @@ export function PricingPlans() {
           </div>
         </div>
       </div>
+      
+      {/* Sales Contact Form */}
+      <SalesContactForm
+        isOpen={isSalesFormOpen}
+        onClose={() => setIsSalesFormOpen(false)}
+      />
+      
+      {/* Demo Form */}
+      <DemoForm
+        isOpen={isDemoFormOpen}
+        onClose={() => setIsDemoFormOpen(false)}
+      />
     </section>
   );
 }
