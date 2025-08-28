@@ -122,7 +122,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && handleClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => isSubmitting && e.preventDefault()}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => isSubmitting && e.preventDefault()}>
         <DialogHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
