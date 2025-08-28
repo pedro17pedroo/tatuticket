@@ -134,22 +134,28 @@ export function TestimonialsSection() {
           ))}
         </div>
 
-        {/* CTA */}
+        {/* Social Proof Summary */}
         <div className="text-center mt-16">
-          <div className="bg-gradient-to-r from-primary to-blue-700 text-white p-8 rounded-2xl">
-            <h3 className="text-2xl font-bold mb-4">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-8 rounded-2xl">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">
               Junte-se a essas empresas de sucesso
             </h3>
-            <p className="text-blue-100 mb-6 text-lg">
-              Transforme seu suporte hoje mesmo e veja os resultados imediatamente
+            <p className="text-gray-600 mb-6 text-lg">
+              Mais de 1000+ empresas já revolucionaram seu atendimento com o TatuTicket
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors" data-testid="button-start-trial">
-                Começar Teste Grátis
-              </button>
-              <button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-primary transition-colors" data-testid="button-see-case-studies">
-                Ver Casos de Sucesso
-              </button>
+            <div className="flex justify-center items-center space-x-8 text-sm text-gray-500">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Implementação em 24h</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Suporte 24/7</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span>99.9% Uptime</span>
+              </div>
             </div>
           </div>
         </div>

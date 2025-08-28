@@ -174,42 +174,11 @@ export function SaasPortal() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <PricingPlans />
-
-      {/* CTA Section */}
-      <section className="py-20 bg-primary text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-8">
-            Pronto para Transformar seu Suporte?
-          </h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Junte-se a mais de 1000+ empresas que já revolucionaram seu atendimento
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg"
-              className="bg-white text-primary hover:bg-gray-100"
-              onClick={() => window.location.href = '/register'}
-              data-testid="button-create-account"
-            >
-              Criar Conta Grátis
-            </Button>
-            <Button 
-              size="lg"
-              variant="outline"
-              className="border-2 border-white text-white hover:bg-white hover:text-primary"
-              onClick={() => setIsDemoFormOpen(true)}
-              data-testid="button-live-demo"
-            >
-              Ver Demo Ao Vivo
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials Section */}
       <TestimonialsSection />
+
+      {/* Pricing Section */}
+      <PricingPlans />
       
       {/* FAQ Section */}
       <FAQSection />
@@ -251,7 +220,6 @@ export function SaasPortal() {
               <ul className="space-y-2 text-sm">
                 <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Funcionalidades</a></li>
                 <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Preços</a></li>
-                <li><a href="/register" className="text-gray-400 hover:text-white transition-colors">Teste Grátis</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Integrações</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">API</a></li>
               </ul>
