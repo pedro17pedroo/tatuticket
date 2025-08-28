@@ -123,8 +123,7 @@ export function SaasPortal() {
                 </Button>
                 <Button 
                   size="lg"
-                  variant="outline"
-                  className="border-2 border-white text-white hover:bg-white hover:text-primary"
+                  className="h-11 rounded-md px-8 border-2 border-white hover:bg-white hover:text-primary text-[#ffffff] bg-[#0076d6]"
                   onClick={() => window.location.href = '/register?demo=true'}
                   data-testid="button-schedule-demo"
                 >
