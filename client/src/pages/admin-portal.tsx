@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlobalUserManagement } from "@/components/admin/global-user-management";
 import { FinancialDashboard } from "@/components/admin/FinancialDashboard";
 import { DemoManagement } from "@/components/admin/demo-management";
+import { SalesManagement } from "@/components/admin/sales-management";
 import { GlobalTenantManagement, RevenueAnalyticsDashboard } from "@/components/portal-completion";
 import type { NavigationItem, GlobalStats } from "@/types/portal";
 import type { Tenant, InsertTenant } from "@shared/schema";
@@ -24,6 +25,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'dashboard', label: 'Dashboard Global', icon: 'fa-tachometer-alt', href: '#', active: true },
   { id: 'tenants', label: 'Tenants', icon: 'fa-building', href: '#' },
   { id: 'users', label: 'Usuários Globais', icon: 'fa-users', href: '#' },
+  { id: 'sales', label: 'Gestão de Vendas', icon: 'fa-handshake', href: '#' },
   { id: 'demos', label: 'Gestão de Demos', icon: 'fa-calendar-alt', href: '#' },
   { id: 'portals', label: 'Portais', icon: 'fa-globe', href: '#' },
   { id: 'financial', label: 'Financeiro', icon: 'fa-dollar-sign', href: '#' },
@@ -251,6 +253,11 @@ export function AdminPortal() {
               <FinancialDashboard />
             )}
 
+            {/* Sales Management Tab */}
+            {activeNavItem === 'sales' && (
+              <SalesManagement />
+            )}
+
             {/* Demo Management Tab */}
             {activeNavItem === 'demos' && (
               <DemoManagement />
@@ -466,7 +473,7 @@ export function AdminPortal() {
             )}
 
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'users', 'tenants', 'financial', 'demos'].includes(activeNavItem) && (
+            {!['dashboard', 'users', 'tenants', 'sales', 'financial', 'demos'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>
