@@ -591,6 +591,25 @@ export const aiInsights = pgTable("ai_insights", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Demo Requests - for managing demo appointments
+export const demoRequests = pgTable("demo_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  company: text("company"),
+  phone: text("phone"),
+  preferredDate: text("preferred_date"), // stored as string like "2024-01-15"
+  preferredTime: text("preferred_time"), // stored as string like "14:00"
+  message: text("message"),
+  status: text("status").notNull().default("pending"), // pending, scheduled, completed, cancelled
+  assignedAdminId: varchar("assigned_admin_id"),
+  scheduledDate: timestamp("scheduled_date"),
+  meetingLink: text("meeting_link"),
+  notes: text("notes"), // internal admin notes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Additional Relations
 export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
   tenant: one(tenants, { fields: [subscriptions.tenantId], references: [tenants.id] }),
@@ -643,6 +662,12 @@ export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({
   createdAt: true,
 });
 
+export const insertDemoRequestSchema = createInsertSchema(demoRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for new entities
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
@@ -653,11 +678,13 @@ export type Integration = typeof integrations.$inferSelect;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
 export type FinancialMetric = typeof financialMetrics.$inferSelect;
 export type AIInsight = typeof aiInsights.$inferSelect;
+export type DemoRequest = typeof demoRequests.$inferSelect;
 
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
 export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+export type InsertDemoRequest = z.infer<typeof insertDemoRequestSchema>;
 
 

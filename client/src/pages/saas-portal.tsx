@@ -6,6 +6,7 @@ import { FAQSection } from "@/components/saas/faq-section";
 import { AICustomerChatbot } from '@/components/saas/AICustomerChatbot';
 import { TestimonialsSection } from "@/components/saas/testimonials-section";
 import { PricingPlans } from "@/components/saas/pricing-plans";
+import { DemoForm } from "@/components/saas/demo-form";
 import type { PricingPlan } from "@/types/portal";
 
 const features = [
@@ -97,6 +98,7 @@ const pricingPlans: PricingPlan[] = [
 
 export function SaasPortal() {
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [isDemoFormOpen, setIsDemoFormOpen] = useState(false);
   const { toast } = useToast();
 
   return (
@@ -124,7 +126,7 @@ export function SaasPortal() {
                 <Button 
                   size="lg"
                   className="h-11 rounded-md px-8 border-2 border-white hover:bg-white hover:text-primary text-[#ffffff] bg-[#0076d6]"
-                  onClick={() => window.location.href = '/register?demo=true'}
+                  onClick={() => setIsDemoFormOpen(true)}
                   data-testid="button-schedule-demo"
                 >
                   Agendar Demo
@@ -197,7 +199,7 @@ export function SaasPortal() {
               size="lg"
               variant="outline"
               className="border-2 border-white text-white hover:bg-white hover:text-primary"
-              onClick={() => window.location.href = '/register?demo=true'}
+              onClick={() => setIsDemoFormOpen(true)}
               data-testid="button-live-demo"
             >
               Ver Demo Ao Vivo
@@ -298,6 +300,12 @@ export function SaasPortal() {
           </div>
         </div>
       </footer>
+
+      {/* Demo Form */}
+      <DemoForm
+        isOpen={isDemoFormOpen}
+        onClose={() => setIsDemoFormOpen(false)}
+      />
 
       {/* AI Customer Chatbot */}
       <AICustomerChatbot
