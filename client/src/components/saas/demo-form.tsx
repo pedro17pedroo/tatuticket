@@ -121,8 +121,8 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && handleClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => isSubmitting && e.preventDefault()}>
         <DialogHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
@@ -137,7 +137,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="h-8 w-8 p-0 hover:bg-gray-100"
+              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
               disabled={isSubmitting}
               data-testid="button-close-demo-form"
             >
@@ -163,7 +163,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                 <Input
                   id="name"
                   placeholder="Digite seu nome completo"
-                  className={`h-11 ${form.formState.errors.name ? 'border-red-500 focus:border-red-500' : ''}`}
+                  className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                   {...form.register("name")}
                   data-testid="input-name"
                 />
@@ -185,7 +185,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                   id="email"
                   type="email"
                   placeholder="nome@empresa.com"
-                  className={`h-11 ${form.formState.errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                  className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                   {...form.register("email")}
                   data-testid="input-email"
                 />
@@ -208,7 +208,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                 <Input
                   id="company"
                   placeholder="Nome da sua empresa"
-                  className={`h-11 ${form.formState.errors.company ? 'border-red-500 focus:border-red-500' : ''}`}
+                  className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.company ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                   {...form.register("company")}
                   data-testid="input-company"
                 />
@@ -229,7 +229,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                 <Input
                   id="phone"
                   placeholder="+244 9XX XXX XXX"
-                  className={`h-11 ${form.formState.errors.phone ? 'border-red-500 focus:border-red-500' : ''}`}
+                  className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                   {...form.register("phone")}
                   data-testid="input-phone"
                 />
@@ -258,7 +258,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                 <Input
                   id="preferredDate"
                   type="date"
-                  className={`h-11 ${form.formState.errors.preferredDate ? 'border-red-500 focus:border-red-500' : ''}`}
+                  className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.preferredDate ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                   {...form.register("preferredDate")}
                   min={new Date().toISOString().split('T')[0]}
                   max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
@@ -281,7 +281,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                   value={form.watch("preferredTime")}
                   onValueChange={(value) => form.setValue("preferredTime", value, { shouldValidate: true })}
                 >
-                  <SelectTrigger className={`h-11 ${form.formState.errors.preferredTime ? 'border-red-500 focus:border-red-500' : ''}`}>
+                  <SelectTrigger className={`h-11 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.preferredTime ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}>
                     <SelectValue placeholder="Selecione o horário" />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,7 +319,7 @@ export function DemoForm({ isOpen, onClose }: DemoFormProps) {
                 id="message"
                 placeholder="Conte-nos sobre os principais desafios da sua empresa em gestão de tickets, número de agentes, volume de tickets ou qualquer requisito específico..."
                 rows={4}
-                className={`resize-none ${form.formState.errors.message ? 'border-red-500 focus:border-red-500' : ''}`}
+                className={`resize-none bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200 ${form.formState.errors.message ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
                 {...form.register("message")}
                 data-testid="textarea-message"
               />
