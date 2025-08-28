@@ -156,7 +156,7 @@ export function SalesContactForm({ isOpen, onClose }: SalesContactFormProps) {
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full bg-[#fc4e42]"
               disabled={isSubmitting}
               data-testid="button-close-sales-form"
             >
