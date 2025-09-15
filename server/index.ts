@@ -15,7 +15,7 @@ app.use('/api', (req, res, next) => {
   const origSend = res.send.bind(res);
   const origEnd = res.end.bind(res);
 
-  function sanitize(body) {
+  function sanitize(body: any): any {
     if (res.statusCode >= 400 && body) {
       if (typeof body === 'object') {
         const hasLeak = 'stack' in body || ('message' in body && !('error' in body));
@@ -51,15 +51,15 @@ app.use('/api', (req, res, next) => {
 
   res.json = (body) => origJson(sanitize(body));
   res.send = (body) => origSend(sanitize(body));
-  res.end = (chunk, encoding, cb) => {
+  res.end = (chunk?: any, encoding?: BufferEncoding | (() => void), cb?: () => void) => {
     if (chunk) {
       const sanitized = sanitize(chunk);
       if (sanitized !== chunk) {
         res.set('Content-Type', 'application/json');
-        return origEnd(sanitized, 'utf8', cb);
+        return origEnd(sanitized, encoding as BufferEncoding, cb);
       }
     }
-    return origEnd(chunk, encoding as any, cb as any);
+    return origEnd(chunk, encoding as BufferEncoding, cb);
   };
   next();
 });
