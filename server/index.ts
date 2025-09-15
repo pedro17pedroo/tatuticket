@@ -13,6 +13,10 @@ app.use(express.urlencoded({ extended: false }));
   // Register all API routes with request logging only for API routes
   const server = registerRoutes(app);
 
+  // API-specific error handling (before Vite to prevent interception)
+  app.use('/api', notFoundHandler);
+  app.use('/api', errorHandler);
+
   // Setup Vite in development or serve static files in production
   if (app.get("env") === "development") {
     await setupVite(app, server);
@@ -20,7 +24,7 @@ app.use(express.urlencoded({ extended: false }));
     serveStatic(app);
   }
 
-  // Error handling middleware (must be last, after Vite setup)
+  // Global error handling middleware for non-API routes
   app.use(errorHandler);
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

@@ -63,6 +63,7 @@ export const errorHandler = (
   }
 
   // Send clean error response to frontend (no stack traces)
+  res.set('X-Error-Handler', 'api');
   res.status(statusCode).json({
     error: message,
     success: false

@@ -4,7 +4,7 @@ import multer from 'multer';
 import { AngolaPaymentService } from '../services/angola-payment.service.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
-import { catchAsync } from '../utils/catchAsync.js';
+import { catchAsync } from '../middlewares';
 import { AuthRequest } from '../types/auth.types.js';
 import { Response } from 'express';
 

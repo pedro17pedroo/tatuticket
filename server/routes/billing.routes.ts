@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { validateBody } from '../middlewares/validation.middleware.js';
-import { catchAsync } from '../utils/catchAsync.js';
+import { catchAsync } from '../middlewares';
 import { AuthRequest } from '../types/auth.types.js';
 import Stripe from 'stripe';
 
