@@ -151,21 +151,21 @@ export function AdminPortal() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Admin Header */}
-      <div className="bg-white border-b border-gray-200">
+      {/* Admin Header - Compact version to work with global navigation */}
+      <div className="bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Painel de Administração Global</h1>
-              <Badge variant="destructive">SUPER ADMIN</Badge>
+          <div className="flex justify-between items-center h-12">
+            <div className="flex items-center space-x-3">
+              <h1 className="text-lg font-semibold text-gray-900">Painel de Administração Global</h1>
+              <Badge variant="destructive" className="text-xs">SUPER ADMIN</Badge>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="relative">
-                <i className="fas fa-shield-alt"></i>
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></span>
+            <div className="flex items-center space-x-3">
+              <Button variant="ghost" size="sm" className="relative h-8 w-8 p-0">
+                <i className="fas fa-shield-alt text-sm"></i>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
               </Button>
               <div className="flex items-center space-x-2">
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-7 h-7">
                   <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=facearea&facepad=2&w=40&h=40" alt="Admin avatar" />
                   <AvatarFallback>SA</AvatarFallback>
                 </Avatar>
