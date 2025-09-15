@@ -63,19 +63,11 @@ export function useNotifications() {
               title: notification.title,
               description: notification.message,
               variant: toastVariant,
-              action: notification.actionUrl ? (
-                <button 
-                  onClick={() => window.location.href = notification.actionUrl!}
-                  className="text-sm underline"
-                >
-                  Ver detalhes
-                </button>
-              ) : undefined,
             });
           }
 
           // Show browser notification if permission granted and page not focused
-          if (Notification.permission === 'granted' && document.hidden) {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
             const browserNotification = new Notification(notification.title, {
               body: notification.message,
               icon: '/favicon.ico',
