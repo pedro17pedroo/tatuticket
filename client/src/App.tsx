@@ -64,8 +64,8 @@ function Router() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Only show navigation on non-register pages */}
-      {!location.startsWith('/register') && (
+      {/* Only show navigation on non-register and non-admin pages */}
+      {!location.startsWith('/register') && !location.startsWith('/admin') && (
         <PortalNavigation 
           currentPortal={currentPortal} 
           onPortalChange={handlePortalChange} 
