@@ -152,9 +152,9 @@ export function AdminPortal() {
   return (
     <div className="min-h-screen bg-background">
 
-      <div className="flex h-screen bg-background">
-        {/* Admin Sidebar */}
-        <div className="w-64 bg-white shadow-sm border-r border-gray-200">
+      <div className="flex bg-background">
+        {/* Admin Sidebar - Fixed */}
+        <div className="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white shadow-sm border-r border-gray-200 z-40 overflow-y-auto">
           <nav className="mt-8 px-4">
             <div className="space-y-2">
               {navigationItems.map((item) => (
@@ -178,7 +178,7 @@ export function AdminPortal() {
         </div>
 
         {/* Admin Main Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 ml-64 overflow-auto min-h-screen">
           <div className="p-8">
             {/* Dashboard Tab */}
             {activeNavItem === 'dashboard' && (
