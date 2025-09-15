@@ -9,6 +9,61 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// API error sanitizer - prevents stack traces from leaking to clients
+app.use('/api', (req, res, next) => {
+  const origJson = res.json.bind(res);
+  const origSend = res.send.bind(res);
+  const origEnd = res.end.bind(res);
+
+  function sanitize(body) {
+    if (res.statusCode >= 400 && body) {
+      if (typeof body === 'object') {
+        const hasLeak = 'stack' in body || ('message' in body && !('error' in body));
+        if (hasLeak) {
+          res.set('X-Error-Handler', 'sanitizer');
+          return { error: body.message || 'Error', success: false };
+        }
+      } else if (typeof body === 'string') {
+        try {
+          const parsed = JSON.parse(body);
+          const hasLeak = parsed && (parsed.stack || (parsed.message && !parsed.error));
+          if (hasLeak) {
+            res.set('X-Error-Handler', 'sanitizer');
+            return JSON.stringify({ error: parsed.message || 'Error', success: false });
+          }
+        } catch {
+          // Non-JSON string: check for stack-like patterns
+          if (/\bError:|at\s+\S+\s+\(/.test(body)) {
+            res.set('X-Error-Handler', 'sanitizer');
+            return JSON.stringify({ error: 'Error', success: false });
+          }
+        }
+      } else if (Buffer.isBuffer(body)) {
+        const asString = body.toString('utf8');
+        const sanitized = sanitize(asString);
+        if (sanitized !== asString) {
+          return Buffer.from(sanitized, 'utf8');
+        }
+      }
+    }
+    return body;
+  }
+
+  res.json = (body) => origJson(sanitize(body));
+  res.send = (body) => origSend(sanitize(body));
+  res.end = (chunk, encoding, cb) => {
+    if (chunk) {
+      const sanitized = sanitize(chunk);
+      if (sanitized !== chunk) {
+        res.set('Content-Type', 'application/json');
+        return origEnd(sanitized, 'utf8', cb);
+      }
+    }
+    return origEnd(chunk, encoding as any, cb as any);
+  };
+  next();
+});
+
 (async () => {
   // Register all API routes with request logging only for API routes
   const server = registerRoutes(app);

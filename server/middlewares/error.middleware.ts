@@ -31,9 +31,11 @@ export const errorHandler = (
   } else if (error instanceof z.ZodError) {
     statusCode = 400;
     message = 'Validation error';
+    res.set('X-Error-Handler', 'api');
     return res.status(statusCode).json({
-      message,
-      errors: error.errors.map(err => ({
+      error: message,
+      success: false,
+      details: error.errors.map(err => ({
         field: err.path.join('.'),
         message: err.message
       }))
