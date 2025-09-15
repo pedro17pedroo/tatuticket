@@ -32,9 +32,24 @@ export function LoginForm({ isOpen, onClose, onSuccess }: LoginFormProps) {
       });
       onSuccess();
     } catch (error: any) {
+      // Extract user-friendly error message
+      let errorMessage = "Credenciais inválidas. Verifique seu email e senha.";
+      
+      if (error.message) {
+        if (error.message.includes("Invalid credentials")) {
+          errorMessage = "Email ou senha incorretos. Tente novamente.";
+        } else if (error.message.includes("Account is disabled")) {
+          errorMessage = "Sua conta está desativada. Entre em contato com o suporte.";
+        } else if (error.message.includes("required")) {
+          errorMessage = "Por favor, preencha todos os campos obrigatórios.";
+        } else if (error.message.includes("network") || error.message.includes("fetch")) {
+          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        }
+      }
+      
       toast({
         title: "Erro no login",
-        description: error.message || "Credenciais inválidas. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -49,7 +49,7 @@ export const errorHandler = (
     message = 'Invalid ID format';
   }
 
-  // Log error in development
+  // Log error in development (server-side only)
   if (process.env.NODE_ENV === 'development') {
     console.error('Error:', {
       message: error.message,
@@ -62,9 +62,10 @@ export const errorHandler = (
     });
   }
 
+  // Send clean error response to frontend (no stack traces)
   res.status(statusCode).json({
-    message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    error: message,
+    success: false
   });
 };
 

@@ -12,8 +12,7 @@ export class AuthService {
   private static readonly JWT_EXPIRES_IN = config.jwt.expiresIn;
 
   static generateToken(user: User): string {
-    const secret = this.JWT_SECRET || 'fallback-secret-key';
-    const expiresIn = this.JWT_EXPIRES_IN || '24h';
+    const secret = process.env.JWT_SECRET || this.JWT_SECRET || 'fallback-secret-key-for-development';
     
     return jwt.sign(
       { 
@@ -23,7 +22,7 @@ export class AuthService {
         tenantId: user.tenantId
       },
       secret,
-      { expiresIn }
+      { expiresIn: '24h' }
     );
   }
 
