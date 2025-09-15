@@ -15,7 +15,8 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      // Don't log the full response body for error responses to avoid exposing sensitive data
+      if (capturedJsonResponse && res.statusCode < 400) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
