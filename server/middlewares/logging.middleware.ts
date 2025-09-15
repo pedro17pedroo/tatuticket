@@ -5,10 +5,10 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
+  const currentResJson = res.json.bind(res);
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+    return currentResJson(bodyJson, ...args);
   };
 
   res.on("finish", () => {
