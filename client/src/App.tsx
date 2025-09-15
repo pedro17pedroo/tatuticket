@@ -4,10 +4,10 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PortalNavigation } from "@/components/portal-navigation";
-import OrganizationLoginPage from "@/pages/organization-login";
-import CustomerLoginPage from "@/pages/customer-login";
-import AdminLoginPage from "@/pages/admin-login";
+import UnifiedLoginPage from "@/pages/unified-login";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { SaasPortal } from "@/pages/saas-portal";
 import { OrganizationPortal } from "@/pages/organization-portal";
@@ -20,10 +20,8 @@ import { usePWA } from "@/hooks/use-pwa";
 import type { PortalType } from "@/types/portal";
 
 function Router() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [currentPortal, setCurrentPortal] = useState<PortalType>('saas');
-  const [showLogin, setShowLogin] = useState(false);
-  const user = authService.getCurrentUser();
   
   // Initialize PWA
   usePWA();
@@ -43,19 +41,14 @@ function Router() {
 
   const handlePortalChange = (portal: PortalType) => {
     if (portal === 'saas') {
-      window.history.pushState({}, '', '/');
+      navigate('/');
       setCurrentPortal(portal);
       return;
     }
     
     if (!authService.canAccessPortal(portal)) {
-      // Redirect to portal-specific login page
-      const loginRoutes = {
-        'organization': '/organization/login',
-        'customer': '/customer/login', 
-        'admin': '/admin/login'
-      };
-      window.history.pushState({}, '', loginRoutes[portal as keyof typeof loginRoutes]);
+      // Redirect to unified login page
+      navigate('/login');
       return;
     }
     
@@ -65,7 +58,7 @@ function Router() {
       'admin': '/admin'
     };
     
-    window.history.pushState({}, '', routes[portal as keyof typeof routes]);
+    navigate(routes[portal as keyof typeof routes]);
     setCurrentPortal(portal);
   };
 
@@ -81,12 +74,10 @@ function Router() {
       
       <Switch>
         <Route path="/" component={SaasPortal} />
+        <Route path="/login" component={UnifiedLoginPage} />
         <Route path="/register" component={RegisterPage} />
         
         {/* Organization Portal Routes */}
-        <Route path="/organization/login">
-          <OrganizationLoginPage />
-        </Route>
         <Route path="/organization">
           <ProtectedRoute portal="organization">
             <OrganizationPortal />
@@ -94,9 +85,6 @@ function Router() {
         </Route>
         
         {/* Customer Portal Routes */}
-        <Route path="/customer/login">
-          <CustomerLoginPage />
-        </Route>
         <Route path="/customer">
           <ProtectedRoute portal="customer">
             <CustomerPortal />
@@ -104,9 +92,6 @@ function Router() {
         </Route>
         
         {/* Admin Portal Routes */}
-        <Route path="/admin/login">
-          <AdminLoginPage />
-        </Route>
         <Route path="/admin">
           <ProtectedRoute portal="admin">
             <AdminPortal />
@@ -122,10 +107,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
