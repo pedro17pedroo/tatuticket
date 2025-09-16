@@ -337,23 +337,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(options: { tenantId?: string; userId?: string; action?: string; limit?: number } = {}): Promise<AuditLog[]> {
-    let query = db.select().from(auditLogs);
+    const conditions = [];
     
     if (options.tenantId) {
-      query = query.where(eq(auditLogs.tenantId, options.tenantId));
+      conditions.push(eq(auditLogs.tenantId, options.tenantId));
     }
     if (options.userId) {
-      query = query.where(eq(auditLogs.userId, options.userId));
+      conditions.push(eq(auditLogs.userId, options.userId));
     }
     if (options.action) {
-      query = query.where(eq(auditLogs.action, options.action));
+      conditions.push(eq(auditLogs.action, options.action));
     }
     
-    if (options.limit) {
-      query = query.limit(options.limit);
+    const baseQuery = db.select().from(auditLogs);
+    
+    if (conditions.length === 0) {
+      const query = baseQuery.orderBy(desc(auditLogs.createdAt));
+      return options.limit ? query.limit(options.limit) : query;
     }
     
-    return query.orderBy(desc(auditLogs.createdAt));
+    const whereCondition = conditions.length === 1 ? conditions[0] : and(...conditions);
+    const query = baseQuery.where(whereCondition).orderBy(desc(auditLogs.createdAt));
+    
+    return options.limit ? query.limit(options.limit) : query;
   }
 
   // Article Versions
@@ -375,14 +381,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApprovalWorkflows(tenantId: string, status?: string): Promise<ApprovalWorkflow[]> {
-    let query = db.select().from(approvalWorkflows)
-      .where(eq(approvalWorkflows.tenantId, tenantId));
+    const conditions = [eq(approvalWorkflows.tenantId, tenantId)];
     
     if (status) {
-      query = query.where(eq(approvalWorkflows.status, status));
+      conditions.push(eq(approvalWorkflows.status, status));
     }
     
-    return query.orderBy(desc(approvalWorkflows.createdAt));
+    return db.select().from(approvalWorkflows)
+      .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+      .orderBy(desc(approvalWorkflows.createdAt));
   }
 
   async updateApprovalWorkflow(id: string, updates: Partial<ApprovalWorkflow>): Promise<ApprovalWorkflow | null> {
