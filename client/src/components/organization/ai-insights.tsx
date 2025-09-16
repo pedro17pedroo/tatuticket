@@ -156,7 +156,7 @@ const MOCK_AI_INSIGHTS = {
 export function AIInsights() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
 
-  const { data: insights = MOCK_AI_INSIGHTS, isLoading } = useQuery({
+  const { data: insights = MOCK_AI_INSIGHTS, isLoading } = useQuery<typeof MOCK_AI_INSIGHTS>({
     queryKey: ['/api/ai/insights', 'tenant-1', selectedTimeframe],
     enabled: true,
   });

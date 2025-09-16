@@ -21,6 +21,8 @@ import { WebhookManager } from "@/components/organization/webhook-manager";
 import { WorkflowEditor } from "@/components/organization/WorkflowEditor";
 import { AdvancedTicketManagement } from "@/components/portal-completion";
 import { AdvancedIntegrations } from "@/components/organization/AdvancedIntegrations";
+import { TimeCostTracking } from "@/components/organization/time-cost-tracking";
+import { HourBankManagement } from "@/components/organization/hour-bank-management";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { cn } from "@/lib/utils";
 import { authService } from "@/lib/auth";
@@ -34,6 +36,8 @@ const navigationItems: NavigationItem[] = [
   { id: 'customers', label: 'Clientes', icon: 'fa-users', href: '#' },
   { id: 'agents', label: 'Agentes', icon: 'fa-user-tie', href: '#' },
   { id: 'slas', label: 'SLAs', icon: 'fa-clock', href: '#' },
+  { id: 'time-costs', label: 'Tempo & Custos', icon: 'fa-stopwatch', href: '#' },
+  { id: 'hour-banks', label: 'Bolsa de Horas', icon: 'fa-coins', href: '#' },
   { id: 'reports', label: 'Relatórios', icon: 'fa-chart-bar', href: '#' },
   { id: 'knowledge', label: 'Base de Conhecimento', icon: 'fa-book', href: '#' },
   { id: 'ai-insights', label: 'Insights de IA', icon: 'fa-brain', href: '#' },
@@ -363,6 +367,16 @@ export function OrganizationPortal() {
               <SLAManagement />
             )}
             
+            {/* Time & Cost Tracking */}
+            {activeNavItem === 'time-costs' && (
+              <TimeCostTracking />
+            )}
+            
+            {/* Hour Bank Management */}
+            {activeNavItem === 'hour-banks' && (
+              <HourBankManagement />
+            )}
+            
             {/* Advanced Analytics */}
             {activeNavItem === 'reports' && (
               <AdvancedAnalytics />
@@ -399,7 +413,7 @@ export function OrganizationPortal() {
             )}
             
             {/* Other navigation items - placeholder for future implementation */}
-            {!['dashboard', 'tickets', 'structure', 'customers', 'agents', 'slas', 'reports', 'knowledge', 'ai-insights', 'gamification', 'export', 'workflows', 'integrations'].includes(activeNavItem) && (
+            {!['dashboard', 'tickets', 'structure', 'customers', 'agents', 'slas', 'time-costs', 'hour-banks', 'reports', 'knowledge', 'ai-insights', 'gamification', 'export', 'workflows', 'integrations'].includes(activeNavItem) && (
               <div className="flex flex-col items-center justify-center h-64">
                 <i className="fas fa-tools text-4xl text-gray-300 mb-4"></i>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">{navigationItems.find(item => item.id === activeNavItem)?.label}</h3>

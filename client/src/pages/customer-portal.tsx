@@ -12,6 +12,7 @@ import { SLAHoursDashboard } from "@/components/customer/sla-hours-dashboard";
 import { SLAExceededBilling } from "@/components/customer/SLAExceededBilling";
 import { AIChatbot } from "@/components/customer/ai-chatbot";
 import { CustomerChatSystem } from "@/components/portal-completion";
+import { InteractiveChatSystem } from "@/components/customer/interactive-chat-system";
 import { authService } from "@/lib/auth";
 import type { Ticket } from "@shared/schema";
 

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { BookOpen, Plus, Edit, Trash2, Eye, Globe, Lock, Search, FileText, Users, TrendingUp, Clock, CheckCircle, XCircle, History } from "lucide-react";
 import { authService } from "@/lib/auth";
