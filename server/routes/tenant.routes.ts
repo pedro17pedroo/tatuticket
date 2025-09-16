@@ -81,7 +81,7 @@ router.post('/onboard', validateBody(onboardTenantSchema), catchAsync(async (req
 
     // Create departments
     if (configuration.departments.length > 0) {
-      const departmentsData = configuration.departments.map(deptName => ({
+      const departmentsData = configuration.departments.map((deptName: string) => ({
         name: deptName,
         tenantId,
         managerEmail: contact.email,
@@ -97,9 +97,9 @@ router.post('/onboard', validateBody(onboardTenantSchema), catchAsync(async (req
       starter: { monthly: 49, yearly: 470 },
       professional: { monthly: 99, yearly: 950 },
       enterprise: { monthly: 199, yearly: 1910 },
-    };
+    } as const;
 
-    const amount = planPricing[plan.selected as keyof typeof planPricing]?.[plan.billingCycle] || 0;
+    const amount = (planPricing as any)[plan.selected]?.[plan.billingCycle] || 0;
 
     const subscription = await db.insert(subscriptions).values({
       tenantId,
