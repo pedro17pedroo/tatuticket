@@ -27,10 +27,12 @@ import {
   Mail,
   Phone,
   MapPin,
-  Briefcase
+  Briefcase,
+  Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
+import { OTPVerification } from './otp-verification';
 
 interface OnboardingData {
   step: number;
@@ -47,6 +49,8 @@ interface OnboardingData {
     email: string;
     phone: string;
     position: string;
+    emailVerified: boolean;
+    verificationToken?: string;
   };
   address: {
     street: string;
@@ -121,6 +125,7 @@ interface OnboardingWizardProps {
 
 export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialPlan = "freemium" }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [data, setData] = useState<OnboardingData>({
     step: 1,
     company: {
@@ -136,6 +141,7 @@ export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialP
       email: '',
       phone: '',
       position: '',
+      emailVerified: false,
     },
     address: {
       street: '',
@@ -188,6 +194,21 @@ export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialP
   const progress = (currentStep / totalSteps) * 100;
 
   const nextStep = () => {
+    // Special handling for step 2 (contact info) - trigger email verification
+    if (currentStep === 2 && !data.contact.emailVerified) {
+      // Validate email before proceeding to OTP
+      if (!data.contact.email || !data.contact.email.includes('@')) {
+        toast({
+          title: "Email obrigatório",
+          description: "Por favor, insira um email válido antes de continuar.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setShowOTPVerification(true);
+      return;
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
       setData({ ...data, step: currentStep + 1 });
@@ -196,9 +217,28 @@ export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialP
 
   const prevStep = () => {
     if (currentStep > 1) {
+      // Hide OTP verification when navigating backwards
+      if (currentStep === 2) {
+        setShowOTPVerification(false);
+      }
       setCurrentStep(currentStep - 1);
       setData({ ...data, step: currentStep - 1 });
     }
+  };
+
+  const handleEmailVerified = (token: string) => {
+    const newStep = 3;
+    setData({
+      ...data,
+      step: newStep, // Fix: Update data.step to match currentStep
+      contact: {
+        ...data.contact,
+        emailVerified: true,
+        verificationToken: token
+      }
+    });
+    setShowOTPVerification(false);
+    setCurrentStep(newStep);
   };
 
   const completeOnboarding = () => {
@@ -300,6 +340,18 @@ export function OnboardingWizard({ onComplete, isOpen = false, onClose, initialP
           </Button>
         )}
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOTPVerification && (
+        <OTPVerification
+          email={data.contact.email}
+          phone={data.contact.phone}
+          onVerified={handleEmailVerified}
+          onResend={() => {
+            // Auto-handled by OTPVerification component
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { Mail, MessageSquare, Shield, RotateCcw, CheckCircle } from 'lucide-react';
 
 interface OTPVerificationProps {
   email: string;
@@ -18,8 +19,51 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
   const [otpCode, setOtpCode] = useState('');
   const [method, setMethod] = useState<'email' | 'sms'>(phone ? 'sms' : 'email');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
+
+  // Auto-send OTP when component mounts
+  useEffect(() => {
+    handleSendInitialOTP();
+  }, []);
+
+  const handleSendInitialOTP = async () => {
+    setIsSending(true);
+    try {
+      const response = await apiRequest('POST', '/api/auth/send-otp', {
+        email,
+        phone: method === 'sms' ? phone : undefined,
+        type: 'email_verification',
+        method: method
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Código Enviado",
+          description: `Um código foi enviado ${method === 'email' ? 'por email' : 'via SMS'}.`
+        });
+
+        // In development, show the OTP code for testing
+        if (result.code && process.env.NODE_ENV === 'development') {
+          toast({
+            title: "Código de Desenvolvimento",
+            description: `Para teste: ${result.code}`,
+            variant: "default"
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erro no Envio",
+        description: "Não foi possível enviar o código. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleVerifyOTP = async () => {
     if (!otpCode || otpCode.length !== 6) {
@@ -53,8 +97,8 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
         throw new Error('Invalid OTP');
       }
     } catch (error) {
-      // Fallback para demo - aceita 123456
-      if (otpCode === '123456') {
+      // Fallback for development only - accepts 123456
+      if (process.env.NODE_ENV === 'development' && otpCode === '123456') {
         const mockToken = `otp_verified_${Date.now()}`;
         onVerified(mockToken);
         
@@ -91,11 +135,15 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
           description: `Um novo código foi enviado ${method === 'email' ? 'por email' : 'via SMS'}.`
         });
       } else {
-        // Fallback para demo
-        toast({
-          title: "Código Reenviado (Demo)",
-          description: `Código de demonstração: 123456`
-        });
+        // Fallback for development only
+        if (process.env.NODE_ENV === 'development') {
+          toast({
+            title: "Código Reenviado (Demo)",
+            description: `Código de demonstração: 123456`
+          });
+        } else {
+          throw new Error('Failed to send OTP');
+        }
       }
 
       // Start countdown
@@ -147,17 +195,33 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
           description: `Um código foi enviado via ${newMethod === 'email' ? 'email' : 'SMS'}.`
         });
       } else {
+        if (process.env.NODE_ENV === 'development') {
+          toast({
+            title: "Método Alterado (Demo)",
+            description: `Use o código: 123456 para demonstração.`
+          });
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível alterar o método de envio.",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error changing method:', error);
+      if (process.env.NODE_ENV === 'development') {
         toast({
           title: "Método Alterado (Demo)",
           description: `Use o código: 123456 para demonstração.`
         });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível alterar o método de envio.",
+          variant: "destructive"
+        });
       }
-    } catch (error) {
-      console.error('Error changing method:', error);
-      toast({
-        title: "Método Alterado (Demo)",
-        description: `Use o código: 123456 para demonstração.`
-      });
     }
   };
 
@@ -165,7 +229,11 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
     <Card className="max-w-md mx-auto">
       <CardHeader className="text-center">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <i className={`fas ${method === 'email' ? 'fa-envelope' : 'fa-sms'} text-2xl text-primary`}></i>
+          {method === 'email' ? (
+            <Mail className="w-8 h-8 text-primary" />
+          ) : (
+            <MessageSquare className="w-8 h-8 text-primary" />
+          )}
         </div>
         <CardTitle>Verificação de Código</CardTitle>
         <p className="text-sm text-gray-600">
@@ -188,13 +256,13 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
               <SelectContent>
                 <SelectItem value="email">
                   <div className="flex items-center">
-                    <i className="fas fa-envelope mr-2"></i>
+                    <Mail className="w-4 h-4 mr-2" />
                     Email ({email})
                   </div>
                 </SelectItem>
                 <SelectItem value="sms">
                   <div className="flex items-center">
-                    <i className="fas fa-sms mr-2"></i>
+                    <MessageSquare className="w-4 h-4 mr-2" />
                     SMS ({phone})
                   </div>
                 </SelectItem>
@@ -219,7 +287,7 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
               data-testid="input-otp-code"
             />
             <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              <i className="fas fa-shield-alt text-gray-400"></i>
+              <Shield className="w-4 h-4 text-gray-400" />
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
@@ -237,12 +305,12 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
           >
             {isVerifying ? (
               <>
-                <i className="fas fa-spinner fa-spin mr-2"></i>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Verificando...
               </>
             ) : (
               <>
-                <i className="fas fa-check mr-2"></i>
+                <CheckCircle className="w-4 h-4 mr-2" />
                 Verificar Código
               </>
             )}
@@ -260,7 +328,7 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
                 <>Reenviar em {countdown}s</>
               ) : (
                 <>
-                  <i className="fas fa-redo mr-2"></i>
+                  <RotateCcw className="w-4 h-4 mr-2" />
                   Reenviar Código
                 </>
               )}
@@ -271,7 +339,7 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
         {/* Dica de Segurança */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <div className="flex items-start">
-            <i className="fas fa-exclamation-triangle text-yellow-600 mr-2 mt-0.5"></i>
+            <Shield className="w-4 h-4 text-yellow-600 mr-2 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-yellow-800">Dica de Segurança</p>
               <p className="text-yellow-700">
@@ -281,18 +349,20 @@ export function OTPVerification({ email, phone, onVerified, onResend }: OTPVerif
           </div>
         </div>
 
-        {/* Para demonstração - mostrar código de teste */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-start">
-            <i className="fas fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
-            <div className="text-sm">
-              <p className="font-medium text-blue-800">Demonstração</p>
-              <p className="text-blue-700">
-                Para teste, use o código: <strong>123456</strong>
-              </p>
+        {/* Para demonstração - mostrar código de teste apenas em desenvolvimento */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start">
+              <Mail className="w-4 h-4 text-blue-600 mr-2 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-800">Demonstração</p>
+                <p className="text-blue-700">
+                  Para teste, use o código: <strong>123456</strong>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
