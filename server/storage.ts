@@ -337,7 +337,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(options: { tenantId?: string; userId?: string; action?: string; limit?: number } = {}): Promise<AuditLog[]> {
-    const conditions = [];
+    const conditions = [] as any[];
     
     if (options.tenantId) {
       conditions.push(eq(auditLogs.tenantId, options.tenantId));
@@ -349,17 +349,21 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(auditLogs.action, options.action));
     }
     
-    const baseQuery = db.select().from(auditLogs);
+    let query = db.select().from(auditLogs);
     
-    if (conditions.length === 0) {
-      const query = baseQuery.orderBy(desc(auditLogs.createdAt));
-      return options.limit ? query.limit(options.limit) : query;
+    if (conditions.length > 0) {
+      query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
     }
     
-    const whereCondition = conditions.length === 1 ? conditions[0] : and(...conditions);
-    const query = baseQuery.where(whereCondition).orderBy(desc(auditLogs.createdAt));
+    query = query.orderBy(desc(auditLogs.createdAt));
     
-    return options.limit ? query.limit(options.limit) : query;
+    if (options.limit) {
+      query = query.limit(options.limit);
+    } else {
+      query = query.limit(100); // Default cap for performance
+    }
+    
+    return await query;
   }
 
   // Article Versions
@@ -387,7 +391,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(approvalWorkflows.status, status));
     }
     
-    return db.select().from(approvalWorkflows)
+    return await db.select().from(approvalWorkflows)
       .where(conditions.length === 1 ? conditions[0] : and(...conditions))
       .orderBy(desc(approvalWorkflows.createdAt));
   }
